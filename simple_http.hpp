@@ -86,7 +86,75 @@ Predicate<A> eq(const A &a) {
   return [a](const A &other) { return a == other; };
 }
 
-HttpStatusCode HTTP_OK = HttpStatusCode{200};
+// Information Responses
+HttpStatusCode CONTINUE = HttpStatusCode{100};
+HttpStatusCode SWITCHING_PROTOCOL = HttpStatusCode{101};
+HttpStatusCode PROCESSING = HttpStatusCode{102};
+HttpStatusCode EARLY_HINTS = HttpStatusCode{103};
+
+// Successful Responses
+HttpStatusCode OK = HttpStatusCode{200};
+HttpStatusCode CREATED = HttpStatusCode{201};
+HttpStatusCode ACCEPTED = HttpStatusCode{202};
+HttpStatusCode NON_AUTHORITATIVE_INFORMATION = HttpStatusCode{203};
+HttpStatusCode NO_CONTENT = HttpStatusCode{204};
+HttpStatusCode RESET_CONTENT = HttpStatusCode{205};
+HttpStatusCode PARTIAL_CONTENT = HttpStatusCode{206};
+HttpStatusCode MULTI_STATUS = HttpStatusCode{207};
+HttpStatusCode ALREADY_REPORTED = HttpStatusCode{208};
+HttpStatusCode IM_USED = HttpStatusCode{226};
+
+// Redirection Messages
+HttpStatusCode MULTIPLE_CHOICE = HttpStatusCode{300};
+HttpStatusCode MOVED_PERMANENTLY = HttpStatusCode{301};
+HttpStatusCode FOUND = HttpStatusCode{302};
+HttpStatusCode SEE_OTHER = HttpStatusCode{303};
+HttpStatusCode NOT_MODIFIED = HttpStatusCode{304};
+HttpStatusCode USE_PROXY = HttpStatusCode{305};
+HttpStatusCode TEMPORARY_REDIRECT = HttpStatusCode{307};
+HttpStatusCode PERMANENT_REDIRECT = HttpStatusCode{308};
+
+// Client Error Responses
+HttpStatusCode BAD_REQUEST = HttpStatusCode{400};
+HttpStatusCode UNAUTHORIZED = HttpStatusCode{401};
+HttpStatusCode PAYMENT_REQUIRED = HttpStatusCode{402};
+HttpStatusCode FORBIDDEN = HttpStatusCode{403};
+HttpStatusCode NOT_FOUND = HttpStatusCode{404};
+HttpStatusCode METHOD_NOT_ALLOWED = HttpStatusCode{405};
+HttpStatusCode NOT_ACCEPTABLE = HttpStatusCode{406};
+HttpStatusCode PROXY_AUTHENTICATION_REQUIRED = HttpStatusCode{407};
+HttpStatusCode REQUEST_TIMEOUT = HttpStatusCode{408};
+HttpStatusCode CONFLICT = HttpStatusCode{409};
+HttpStatusCode GONE = HttpStatusCode{410};
+HttpStatusCode LENGTH_REQUIRED = HttpStatusCode{411};
+HttpStatusCode PRECONDITION_FAILED = HttpStatusCode{412};
+HttpStatusCode PAYLOAD_TOO_LARGE = HttpStatusCode{413};
+HttpStatusCode URI_TOO_LONG = HttpStatusCode{414};
+HttpStatusCode UNSUPPORTED_MEDIA_TYPE = HttpStatusCode{415};
+HttpStatusCode RANGE_NOT_SATISFIABLE = HttpStatusCode{416};
+HttpStatusCode EXPECTATION_FAILED = HttpStatusCode{417};
+HttpStatusCode IM_A_TEAPOT = HttpStatusCode{418};
+HttpStatusCode UNPROCESSABLE_ENTITY = HttpStatusCode{422};
+HttpStatusCode FAILED_DEPENDENCY = HttpStatusCode{424};
+HttpStatusCode TOO_EARLY = HttpStatusCode{425};
+HttpStatusCode UPGRADE_REQUIRED = HttpStatusCode{426};
+HttpStatusCode PRECONDITION_REQUIRED = HttpStatusCode{428};
+HttpStatusCode TOO_MANY_REQUESTS = HttpStatusCode{429};
+HttpStatusCode REQUEST_HEADER_FIELDS_TOO_LARGE = HttpStatusCode{431};
+HttpStatusCode UNAVAILABLE_FOR_LEGAL_REASONS = HttpStatusCode{451};
+
+// Server Error Responses
+HttpStatusCode INTERNAL_SERVER_ERROR = HttpStatusCode{500};
+HttpStatusCode NOT_IMPLEMENTED = HttpStatusCode{501};
+HttpStatusCode BAD_GATEWAY = HttpStatusCode{502};
+HttpStatusCode SERVICE_UNAVAILABLE = HttpStatusCode{503};
+HttpStatusCode GATEWAY_TIMEOUT = HttpStatusCode{504};
+HttpStatusCode HTTP_VERSION_NOT_SUPPORTED = HttpStatusCode{505};
+HttpStatusCode VARIANT_ALSO_NEGOTIATES = HttpStatusCode{506};
+HttpStatusCode INSUFFICIENT_STORAGE = HttpStatusCode{507};
+HttpStatusCode LOOP_DETECTED = HttpStatusCode{508};
+HttpStatusCode NOT_EXTENDED = HttpStatusCode{510};
+HttpStatusCode NETWORK_AUTHENTICATION_REQUIRED = HttpStatusCode{511};
 
 struct Client {
   Client() : error_callback_(NoopErrorCallback), debug_(false) {}
@@ -97,7 +165,7 @@ struct Client {
   [[nodiscard]]
   std::optional<HttpResponse> get(const Url &url,
                                   const Headers &headers = {}) {
-    return execute(url, make_header_callback(headers), NoopCurlSetupCallback, eq(HTTP_OK));
+    return execute(url, make_header_callback(headers), NoopCurlSetupCallback, eq(OK));
   }
 
   [[nodiscard]]
@@ -108,7 +176,7 @@ struct Client {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.value().c_str());
     };
 
-    return execute(url, make_header_callback(headers), setup, eq(HTTP_OK));
+    return execute(url, make_header_callback(headers), setup, eq(OK));
   }
 
   [[nodiscard]]
