@@ -1,0 +1,6 @@
+.vscode
+*.o
+post
+get
+connection_error
+venv
