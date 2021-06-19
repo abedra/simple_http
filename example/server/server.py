@@ -13,5 +13,9 @@ def post():
     data = request.get_json(silent=True)
     return json.dumps({'hello': data['name']})
 
+@app.route("/empty_post_response", methods = ['POST'])
+def empty_post_response():
+    return "", 204
+
 if __name__ == '__main__':
     app.run()

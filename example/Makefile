@@ -18,7 +18,13 @@ post.o: post.cpp
 post: post.o
 	g++ post.o -o post -lcurl
 
-all: get connection_error post
+empty_post_response.o: empty_post_response.cpp
+	g++ -Wall -Werror -fconcepts -std=c++2a -c empty_post_response.cpp
+
+empty_post_response: empty_post_response.o
+	g++ empty_post_response.o -o empty_post_response -lcurl
+
+all: get connection_error post empty_post_response
 
 .PHONY: clean
 clean:
