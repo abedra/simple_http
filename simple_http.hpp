@@ -59,7 +59,7 @@ SIMPLE_HTTP_TINY_LONG(HttpStatusCode)
 
 struct HttpResponse {
   HttpResponseBody body;
-  HttpStatusCode rawStatusCode;
+  HttpStatusCode status;
 };
 
 using CurlSetupCallback = std::function<void(CURL *curl)>;
@@ -165,7 +165,14 @@ struct Client {
   [[nodiscard]]
   std::optional<HttpResponse> get(const Url &url,
                                   const Headers &headers = {}) {
-    return execute(url, make_header_callback(headers), NoopCurlSetupCallback, eq(OK));
+    return get(url, eq(OK), headers);
+  }
+
+  [[nodiscard]]
+  std::optional<HttpResponse> get(const Url &url,
+                                  const Predicate<HttpStatusCode> &sucessPredicate,
+                                  const Headers &headers = {}) {
+    return execute(url, make_header_callback(headers), NoopCurlSetupCallback, sucessPredicate);
   }
 
   [[nodiscard]]

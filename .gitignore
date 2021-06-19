@@ -5,3 +5,4 @@ get
 connection_error
 venv
 empty_post_response
+get_not_allowed
