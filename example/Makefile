@@ -37,4 +37,4 @@ all: get connection_error post empty_post_response get_not_allowed
 
 .PHONY: clean
 clean:
-	rm -f *.o get connection_error post
+	rm -f *.o get connection_error post empty_post_response get_not_allowed
