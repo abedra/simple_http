@@ -195,6 +195,26 @@ struct Client {
   }
 
   [[nodiscard]]
+  std::optional<HttpResponse> put(const Url &url,
+                                  const HttpRequestBody &body,
+                                  const Headers &headers = {}) {
+    return put(url, body, eq(OK), headers);
+  }
+
+  [[nodiscard]]
+  std::optional<HttpResponse> put(const Url &url,
+                                  const HttpRequestBody &body,
+                                  const Predicate<HttpStatusCode> &successPredicate,
+                                  const Headers &headers = {}) {
+      CurlSetupCallback setup = [&](CURL *curl) {
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.value().c_str());
+      };
+
+      return execute(url, make_header_callback(headers), setup, successPredicate);
+  }
+
+  [[nodiscard]]
   std::optional<HttpResponse> execute(const Url &url,
                                       const CurlHeaderCallback &curl_header_callback,
                                       const CurlSetupCallback &curl_setup_callback,

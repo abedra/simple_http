@@ -34,6 +34,20 @@ TEST_CASE("Integration Tests")
         CHECK(keys["hello"] == "test");
     }
 
+    SECTION("Put request")
+    {
+        auto maybeResponse = client.put(SimpleHttp::Url{"http://localhost:5000/put"},
+                                        SimpleHttp::HttpRequestBody{"{\"update\":\"test\"}"},
+                                        {{"Content-Type", "application/json"}});
+
+        REQUIRE(maybeResponse);
+
+        SimpleHttp::HttpResponse response = maybeResponse.value();
+        auto keys = nlohmann::json::parse(response.body.value());
+
+        CHECK(keys["update"] == "test");
+    }
+
     SECTION("Connection error")
     {
         std::string error;
