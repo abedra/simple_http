@@ -22,5 +22,9 @@ def put():
     data = request.get_json(silent=True)
     return json.dumps({'update': data['update']})
 
+@app.route('/delete', methods = ['DELETE'])
+def delete():
+    return '', 200
+
 if __name__ == '__main__':
     app.run()

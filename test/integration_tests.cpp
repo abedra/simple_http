@@ -48,6 +48,14 @@ TEST_CASE("Integration Tests")
         CHECK(keys["update"] == "test");
     }
 
+    SECTION("Delete request")
+    {
+        auto maybeResponse = client.del(SimpleHttp::Url{"http://localhost:5000/delete"});
+
+        REQUIRE(maybeResponse);
+        CHECK(maybeResponse.value().status == SimpleHttp::OK);
+    }
+
     SECTION("Connection error")
     {
         std::string error;

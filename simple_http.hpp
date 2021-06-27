@@ -215,6 +215,23 @@ struct Client {
   }
 
   [[nodiscard]]
+  std::optional<HttpResponse> del(const Url &url,
+                                  const Headers &headers = {}) {
+    return del(url, eq(OK), headers);
+  }
+
+  [[nodiscard]]
+  std::optional<HttpResponse> del(const Url &url,
+                                  const Predicate<HttpStatusCode> &successPredicate,
+                                  const Headers &headers = {}) {
+    CurlSetupCallback setup = [&](CURL *curl) {
+      curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+    };
+    
+    return execute(url, make_header_callback(headers), setup, successPredicate);
+  }
+
+  [[nodiscard]]
   std::optional<HttpResponse> execute(const Url &url,
                                       const CurlHeaderCallback &curl_header_callback,
                                       const CurlSetupCallback &curl_setup_callback,
