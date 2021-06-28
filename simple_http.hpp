@@ -232,6 +232,15 @@ struct Client {
   }
 
   [[nodiscard]]
+  std::optional<HttpResponse> head(const Url &url) {
+    CurlSetupCallback setup = [&](CURL *curl) {
+      curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+    };
+
+    return execute(url, NoopCurlHeaderCallback, setup, eq(OK));
+  }
+
+  [[nodiscard]]
   std::optional<HttpResponse> execute(const Url &url,
                                       const CurlHeaderCallback &curl_header_callback,
                                       const CurlSetupCallback &curl_setup_callback,
