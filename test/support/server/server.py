@@ -1,5 +1,6 @@
 from flask import Flask
 from flask import request
+from flask import Response
 import json
 
 app = Flask(__name__)
@@ -25,6 +26,10 @@ def put():
 @app.route('/delete', methods = ['DELETE'])
 def delete():
     return '', 200
+
+@app.route('/trace', methods = ['TRACE'])
+def trace():
+    return Response(request.data, status=200, mimetype='message/http')
 
 if __name__ == '__main__':
     app.run()

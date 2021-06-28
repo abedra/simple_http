@@ -10,11 +10,11 @@ TEST_CASE("Integration Tests")
     
     SECTION("GET Request")
     {
-        auto maybeResponse = client.get(SimpleHttp::Url{"http://localhost:5000/get"});
+        auto maybe_response = client.get(SimpleHttp::Url{"http://localhost:5000/get"});
 
-        REQUIRE(maybeResponse);
+        REQUIRE(maybe_response);
 
-        SimpleHttp::HttpResponse response = maybeResponse.value();
+        SimpleHttp::HttpResponse response = maybe_response.value();
         auto keys = nlohmann::json::parse(response.body.value());
 
         CHECK(keys["get"] == "ok");
@@ -22,13 +22,13 @@ TEST_CASE("Integration Tests")
 
     SECTION("Post request")
     {
-        auto maybeResponse = client.post(SimpleHttp::Url{"http://localhost:5000/post"},
-                                         SimpleHttp::HttpRequestBody{"{\"name\":\"test\"}"},
-                                         {{"Content-Type", "application/json"}});
+        auto maybe_response = client.post(SimpleHttp::Url{"http://localhost:5000/post"},
+                                          SimpleHttp::HttpRequestBody{"{\"name\":\"test\"}"},
+                                          {{"Content-Type", "application/json"}});
 
-        REQUIRE(maybeResponse);
+        REQUIRE(maybe_response);
 
-        SimpleHttp::HttpResponse response = maybeResponse.value();
+        SimpleHttp::HttpResponse response = maybe_response.value();
         auto keys = nlohmann::json::parse(response.body.value());
 
         CHECK(keys["hello"] == "test");
@@ -36,13 +36,13 @@ TEST_CASE("Integration Tests")
 
     SECTION("Put request")
     {
-        auto maybeResponse = client.put(SimpleHttp::Url{"http://localhost:5000/put"},
-                                        SimpleHttp::HttpRequestBody{"{\"update\":\"test\"}"},
-                                        {{"Content-Type", "application/json"}});
+        auto maybe_response = client.put(SimpleHttp::Url{"http://localhost:5000/put"},
+                                         SimpleHttp::HttpRequestBody{"{\"update\":\"test\"}"},
+                                         {{"Content-Type", "application/json"}});
 
-        REQUIRE(maybeResponse);
+        REQUIRE(maybe_response);
 
-        SimpleHttp::HttpResponse response = maybeResponse.value();
+        SimpleHttp::HttpResponse response = maybe_response.value();
         auto keys = nlohmann::json::parse(response.body.value());
 
         CHECK(keys["update"] == "test");
@@ -50,25 +50,33 @@ TEST_CASE("Integration Tests")
 
     SECTION("Delete request")
     {
-        auto maybeResponse = client.del(SimpleHttp::Url{"http://localhost:5000/delete"});
+        auto maybe_response = client.del(SimpleHttp::Url{"http://localhost:5000/delete"});
 
-        REQUIRE(maybeResponse);
-        CHECK(maybeResponse.value().status == SimpleHttp::OK);
+        REQUIRE(maybe_response);
+        CHECK(maybe_response.value().status == SimpleHttp::OK);
     }
 
     SECTION("Head request")
     {
-        auto maybeResponse = client.head(SimpleHttp::Url{"http://localhost:5000/get"});
-        REQUIRE(maybeResponse);
-        CHECK(maybeResponse.value().status == SimpleHttp::OK);
+        auto maybe_response = client.head(SimpleHttp::Url{"http://localhost:5000/get"});
+        REQUIRE(maybe_response);
+        CHECK(maybe_response.value().status == SimpleHttp::OK);
     }
 
     SECTION("Options request")
     {
-        auto maybeResponse = client.options(SimpleHttp::Url{"http://localhost:5000/get"});
+        auto maybe_response = client.options(SimpleHttp::Url{"http://localhost:5000/get"});
 
-        REQUIRE(maybeResponse);
-        CHECK_THAT(maybeResponse.value().headers.value(), Catch::Contains("Allow: GET, HEAD, OPTIONS"));
+        REQUIRE(maybe_response);
+        CHECK_THAT(maybe_response.value().headers.value(), Catch::Contains("Allow: HEAD, OPTIONS, GET"));
+    }
+
+    SECTION("Trace request")
+    {
+        auto maybe_response = client.trace(SimpleHttp::Url{"http://localhost:5000/trace"});
+
+        REQUIRE(maybe_response);
+        CHECK_THAT(maybe_response.value().headers.value(), Catch::Contains("Content-Type: message/http"));
     }
 
     SECTION("Connection error")
@@ -78,22 +86,22 @@ TEST_CASE("Integration Tests")
             [&error](auto &err) { error = "Error: " + err; }
         };
 
-        auto maybeResponse = client.get(SimpleHttp::Url{"error"});
+        auto maybe_response = client.get(SimpleHttp::Url{"error"});
 
-        REQUIRE(!maybeResponse);
+        REQUIRE(!maybe_response);
         CHECK(error == "Error: Couldn't resolve host name");
     }
 
     SECTION("Post request that expects a 204 NO_CONTENT response")
     {
-        auto maybeResponse = client.post(SimpleHttp::Url{"http://localhost:5000/empty_post_response"},
-                                         SimpleHttp::HttpRequestBody{""},
-                                         SimpleHttp::eq(SimpleHttp::NO_CONTENT),
-                                         {{"Content-Type", "application/json"}});
+        auto maybe_response = client.post(SimpleHttp::Url{"http://localhost:5000/empty_post_response"},
+                                          SimpleHttp::HttpRequestBody{""},
+                                          SimpleHttp::eq(SimpleHttp::NO_CONTENT),
+                                          {{"Content-Type", "application/json"}});
 
-        REQUIRE(maybeResponse);
+        REQUIRE(maybe_response);
     
-        SimpleHttp::HttpResponse response = maybeResponse.value();
+        SimpleHttp::HttpResponse response = maybe_response.value();
         
         CHECK(response.status == SimpleHttp::NO_CONTENT);
         CHECK(response.body.value().empty());
@@ -101,10 +109,10 @@ TEST_CASE("Integration Tests")
 
     SECTION("Get request that expects a 405 METHOD_NOT_ALLOWED response")
     {
-        auto maybeResponse = client.get(SimpleHttp::Url{"http://localhost:5000/empty_post_response"},
-                                        SimpleHttp::eq(SimpleHttp::METHOD_NOT_ALLOWED));
+        auto maybe_response = client.get(SimpleHttp::Url{"http://localhost:5000/empty_post_response"},
+                                         SimpleHttp::eq(SimpleHttp::METHOD_NOT_ALLOWED));
 
-        REQUIRE(maybeResponse);
-        CHECK(maybeResponse.value().status == SimpleHttp::METHOD_NOT_ALLOWED);
+        REQUIRE(maybe_response);
+        CHECK(maybe_response.value().status == SimpleHttp::METHOD_NOT_ALLOWED);
     }
 }
