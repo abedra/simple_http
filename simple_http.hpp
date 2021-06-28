@@ -50,6 +50,7 @@ protected:
 
 SIMPLE_HTTP_TINY_STRING(Url)
 SIMPLE_HTTP_TINY_STRING(HttpResponseBody)
+SIMPLE_HTTP_TINY_STRING(HttpResponseHeaders)
 SIMPLE_HTTP_TINY_STRING(HttpRequestBody)
 
 SIMPLE_HTTP_TINY_LONG(HttpStatusCode)
@@ -58,8 +59,9 @@ SIMPLE_HTTP_TINY_LONG(HttpStatusCode)
 #undef SIMPLE_HTTP_TINY_LONG
 
 struct HttpResponse {
-  HttpResponseBody body;
   HttpStatusCode status;
+  HttpResponseHeaders headers;
+  HttpResponseBody body;
 };
 
 using CurlSetupCallback = std::function<void(CURL *curl)>;
@@ -241,11 +243,21 @@ struct Client {
   }
 
   [[nodiscard]]
+  std::optional<HttpResponse> options(const Url &url) {
+    CurlSetupCallback setup = [&](CURL *curl) {
+      curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "OPTIONS");
+    };
+
+    return execute(url, NoopCurlHeaderCallback, setup, eq(OK));
+  }
+
+  [[nodiscard]]
   std::optional<HttpResponse> execute(const Url &url,
                                       const CurlHeaderCallback &curl_header_callback,
                                       const CurlSetupCallback &curl_setup_callback,
                                       const Predicate<HttpStatusCode> &successPredicate) {
-      std::string buffer;
+      std::string body_buffer;
+      std::string header_buffer;
       long rawStatusCode = 0;
 
       CURL *curl = curl_easy_init();
@@ -254,8 +266,10 @@ struct Client {
 
           curl_easy_setopt(curl, CURLOPT_URL, url.value().c_str());
           curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-          curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);          
+          curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body_buffer);          
           curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_header_callback(chunk));
+          curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_callback);
+          curl_easy_setopt(curl, CURLOPT_HEADERDATA, &header_buffer);
           curl_easy_setopt(curl, CURLOPT_VERBOSE, debug_);
           curl_setup_callback(curl);
 
@@ -274,7 +288,11 @@ struct Client {
 
       HttpStatusCode status{rawStatusCode};
       if (successPredicate(status)) {
-        return std::optional<HttpResponse>({HttpResponseBody{buffer}, status});
+        return std::optional<HttpResponse>({
+            status, 
+            HttpResponseHeaders{header_buffer}, 
+            HttpResponseBody{body_buffer}
+          });
       } else {
         return std::nullopt;
       }

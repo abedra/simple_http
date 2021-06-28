@@ -63,6 +63,14 @@ TEST_CASE("Integration Tests")
         CHECK(maybeResponse.value().status == SimpleHttp::OK);
     }
 
+    SECTION("Options request")
+    {
+        auto maybeResponse = client.options(SimpleHttp::Url{"http://localhost:5000/get"});
+
+        REQUIRE(maybeResponse);
+        CHECK_THAT(maybeResponse.value().headers.value(), Catch::Contains("Allow: GET, HEAD, OPTIONS"));
+    }
+
     SECTION("Connection error")
     {
         std::string error;
