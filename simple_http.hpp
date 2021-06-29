@@ -50,19 +50,12 @@ protected:
 
 SIMPLE_HTTP_TINY_STRING(Url)
 SIMPLE_HTTP_TINY_STRING(HttpResponseBody)
-SIMPLE_HTTP_TINY_STRING(HttpResponseHeaders)
 SIMPLE_HTTP_TINY_STRING(HttpRequestBody)
 
 SIMPLE_HTTP_TINY_LONG(HttpStatusCode)
 
 #undef SIMPLE_HTTP_TINY_STRING
 #undef SIMPLE_HTTP_TINY_LONG
-
-struct HttpResponse {
-  HttpStatusCode status;
-  HttpResponseHeaders headers;
-  HttpResponseBody body;
-};
 
 using CurlSetupCallback = std::function<void(CURL *curl)>;
 CurlSetupCallback NoopCurlSetupCallback = [](auto){};
@@ -74,6 +67,37 @@ using ErrorCallback = std::function<void(const std::string&)>;
 ErrorCallback NoopErrorCallback = [](auto&){};
 
 using Headers = std::unordered_map<std::string, std::string>;
+
+struct HttpResponseHeaders {
+  explicit HttpResponseHeaders(const Headers &headers) : headers_(headers) {}
+  explicit HttpResponseHeaders(const std::string &header_string) : headers_(parse(header_string)) {}
+
+  const Headers& value() const {
+    return headers_;
+  }
+
+private:
+  Headers headers_;
+
+  Headers parse(const std::string &header_string) {
+    std::stringstream ss(header_string);
+    std::string container;
+    Headers headers;
+    while(std::getline(ss, container, '\n')) {
+      std::size_t pos = container.find(":");
+      if (pos != std::string::npos) {
+        headers.emplace(container.substr(0, pos), container.substr(pos + 1));
+      }
+    }
+    return headers;
+  }
+};
+
+struct HttpResponse {
+  HttpStatusCode status;
+  HttpResponseHeaders headers;
+  HttpResponseBody body;
+};
 
 template<class Fn, class A, class B>
 concept Fn1 = requires(Fn fn, A a) {

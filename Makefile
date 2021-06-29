@@ -1,6 +1,6 @@
 default: test
 
-test/integration_tests.o: test/integration_tests.cpp
+test/integration_tests.o: simple_http.hpp test/integration_tests.cpp
 	g++ -Wall -Werror -fconcepts -std=c++2a -c test/integration_tests.cpp -o test/integration_tests.o
 
 integration_tests: test/integration_tests.o

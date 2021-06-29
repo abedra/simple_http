@@ -68,7 +68,8 @@ TEST_CASE("Integration Tests")
         auto maybe_response = client.options(SimpleHttp::Url{"http://localhost:5000/get"});
 
         REQUIRE(maybe_response);
-        CHECK_THAT(maybe_response.value().headers.value(), Catch::Contains("Allow: HEAD, OPTIONS, GET"));
+        SimpleHttp::Headers headers = maybe_response.value().headers.value();
+        CHECK(headers.at("Allow") == "HEAD, OPTIONS, GET");
     }
 
     SECTION("Trace request")
@@ -76,7 +77,12 @@ TEST_CASE("Integration Tests")
         auto maybe_response = client.trace(SimpleHttp::Url{"http://localhost:5000/trace"});
 
         REQUIRE(maybe_response);
-        CHECK_THAT(maybe_response.value().headers.value(), Catch::Contains("Content-Type: message/http"));
+        
+        const SimpleHttp::Headers &headers = maybe_response.value().headers.value();
+        std::string content_type = headers.at("Content-Type");
+        std::string expected = "message/http";
+        std::cout << expected.length() << " : " << content_type.length() << std::endl;
+        CHECK(expected == content_type);
     }
 
     SECTION("Connection error")
