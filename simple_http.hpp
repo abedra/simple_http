@@ -129,17 +129,14 @@ struct HttpResponse {
   HttpResponseBody body;
 };
 
-template<class Fn, class A, class B>
-concept Fn1 = requires(Fn fn, A a) {
-  { fn(a) } -> B;
-};
-
-template<class Fn, class A>
-concept Predicate = Fn1<Fn, A, bool>;
+template<class A>
+using Predicate = std::function<bool(const A &a)>;
 
 template<class A>
 Predicate<A> eq(const A &a) {
-  return [a](const A &other) { return a == other; };
+  return [a](const A &other) {
+    return a == other;
+  };
 }
 
 // Information Responses
