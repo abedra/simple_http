@@ -3,6 +3,7 @@
 #include <sstream>
 #include <optional>
 #include <functional>
+#include <algorithm>
 
 namespace SimpleHttp {
 
@@ -68,6 +69,32 @@ ErrorCallback NoopErrorCallback = [](auto&){};
 
 using Headers = std::unordered_map<std::string, std::string>;
 
+static const std::string WHITESPACE = "\n\t\f\v\r ";
+
+static std::string leftTrim(const std::string &candidate) {
+  size_t start = candidate.find_first_not_of(WHITESPACE);
+  return (start == std::string::npos) ? "" : candidate.substr(start);
+}
+
+static std::string rightTrim(const std::string &candidate) {
+  size_t end = candidate.find_last_not_of(WHITESPACE);
+  return (end == std::string::npos) ? "" : candidate.substr(0, end + 1);
+}
+
+static std::string trim(const std::string &candidate) {
+  return rightTrim(leftTrim(candidate));
+}
+
+static std::vector<std::string> vec(const std::string& candidate, const char separator) {
+  std::vector<std::string> container;
+  std::stringstream ss(candidate);
+  std::string temp;
+  while (std::getline(ss, temp, separator)) {
+    container.push_back(trim(temp));
+  }
+  return container;
+}
+
 struct HttpResponseHeaders {
   explicit HttpResponseHeaders(const Headers &headers) : headers_(headers) {}
   explicit HttpResponseHeaders(const std::string &header_string) : headers_(parse(header_string)) {}
@@ -86,7 +113,10 @@ private:
     while(std::getline(ss, container, '\n')) {
       std::size_t pos = container.find(":");
       if (pos != std::string::npos) {
-        headers.emplace(container.substr(0, pos), container.substr(pos + 1));
+        headers.emplace(
+          trim(container.substr(0, pos)),
+          trim(container.substr(pos + 1))
+        );
       }
     }
     return headers;
