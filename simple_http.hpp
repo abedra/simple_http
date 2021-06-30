@@ -381,6 +381,5 @@ private:
           return chunk;
       };
   }
-
 };
 }  // namespace SimpleHttp
