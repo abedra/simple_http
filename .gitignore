@@ -3,3 +3,4 @@
 integration_tests
 venv
 .idea
+cmake-build-debug
