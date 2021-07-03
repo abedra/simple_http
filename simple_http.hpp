@@ -223,9 +223,9 @@ struct Client {
 
   [[nodiscard]]
   std::optional<HttpResponse> get(const Url &url,
-                                  const Predicate<HttpStatusCode> &sucessPredicate,
+                                  const Predicate<HttpStatusCode> &successPredicate,
                                   const Headers &headers = {}) {
-    return execute(url, make_header_callback(headers), NoopCurlSetupCallback, sucessPredicate);
+    return execute(url, make_header_callback(headers), NoopCurlSetupCallback, successPredicate);
   }
 
   [[nodiscard]]
