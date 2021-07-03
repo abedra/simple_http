@@ -2,3 +2,4 @@
 *.o
 integration_tests
 venv
+.idea
