@@ -52,6 +52,11 @@ protected:
 
 SIMPLE_HTTP_TINY_STRING(HttpResponseBody)
 SIMPLE_HTTP_TINY_STRING(HttpRequestBody)
+SIMPLE_HTTP_TINY_STRING(Protcol)
+SIMPLE_HTTP_TINY_STRING(Host)
+SIMPLE_HTTP_TINY_STRING(PathSegment)
+SIMPLE_HTTP_TINY_STRING(QueryParameterKey)
+SIMPLE_HTTP_TINY_STRING(QueryParameterValue)
 
 SIMPLE_HTTP_TINY_LONG(HttpStatusCode)
 
@@ -68,6 +73,9 @@ using ErrorCallback = std::function<void(const std::string&)>;
 ErrorCallback NoopErrorCallback = [](auto&){};
 
 using Headers = std::unordered_map<std::string, std::string>;
+
+using PathSegments = std::vector<PathSegment>;
+using QueryParameters = std::vector<std::pair<QueryParameterKey, QueryParameterValue>>;
 
 static const std::string WHITESPACE = "\n\t\f\v\r ";
 
@@ -132,10 +140,10 @@ struct HttpResponse {
 struct HttpUrl {
   HttpUrl() = default;
 
-  HttpUrl(std::string protocol,
-          std::string host,
-          std::vector<std::string> path_segments = {},
-          std::vector<std::pair<std::string, std::string>> query_parameters = {})
+  HttpUrl(Protcol protocol,
+          Host host,
+          PathSegments path_segments = {},
+          QueryParameters query_parameters = {})
     : protocol_(std::move(protocol))
     , host_(std::move(host))
     , path_segments_(std::move(path_segments))
@@ -149,7 +157,7 @@ struct HttpUrl {
   {}
 
   [[nodiscard]]
-  const std::string& protocol() {
+  const Protcol & protocol() {
     return protocol_;
   }
   
@@ -162,34 +170,34 @@ struct HttpUrl {
   }
 
   [[nodiscard]]
-  HttpUrl& with_protocol(std::string protocol) {
+  HttpUrl& with_protocol(Protcol protocol) {
     protocol_ = std::move(protocol);
     return *this;
   }
 
   [[nodiscard]]
-  HttpUrl& with_host(std::string host) {
+  HttpUrl& with_host(Host host) {
     host_ = std::move(host);
     return *this;
   }
 
   [[nodiscard]]
-  HttpUrl& with_path_segments(std::vector<std::string> path_segments) {
+  HttpUrl& with_path_segments(PathSegments path_segments) {
     path_segments_ = std::move(path_segments);
     return *this;
   }
 
   [[nodiscard]]
-  HttpUrl& with_query_parameters(std::vector<std::pair<std::string, std::string>> query_parameters) {
+  HttpUrl& with_query_parameters(QueryParameters query_parameters) {
     query_parameters_ = std::move(query_parameters);
     return *this;
   }
 
 private:
-  std::string protocol_;
-  std::string host_;
-  std::vector<std::string> path_segments_;
-  std::vector<std::pair<std::string, std::string>> query_parameters_;
+  Protcol protocol_;
+  Host host_;
+  PathSegments path_segments_;
+  QueryParameters query_parameters_;
   std::string value_;
 
   static std::string detect_protocol(const std::string &url_string) {
@@ -439,7 +447,7 @@ struct Client {
           curl_easy_setopt(curl, CURLOPT_VERBOSE, debug_);
           curl_setup_callback(curl);
 
-          if (url.protocol() == "https") {
+          if (url.protocol().value() == "https") {
             verify_
                 ? curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L)
                 : curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
