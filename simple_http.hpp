@@ -4,6 +4,7 @@
 #include <optional>
 #include <functional>
 #include <algorithm>
+#include <utility>
 
 namespace SimpleHttp {
 
@@ -31,7 +32,7 @@ struct Tiny {
     }
 
     [[nodiscard]]
-    const std::string toString() const {
+    std::string toString() const {
       std::ostringstream ss;
       ss << value();
       return ss.str();
@@ -49,7 +50,6 @@ protected:
   struct Name##Detail {};                \
   using Name = Tiny<Name##Detail, long>; \
 
-SIMPLE_HTTP_TINY_STRING(Url)
 SIMPLE_HTTP_TINY_STRING(HttpResponseBody)
 SIMPLE_HTTP_TINY_STRING(HttpRequestBody)
 
@@ -96,7 +96,7 @@ static std::vector<std::string> vec(const std::string& candidate, const char sep
 }
 
 struct HttpResponseHeaders {
-  explicit HttpResponseHeaders(const Headers &headers) : headers_(headers) {}
+  explicit HttpResponseHeaders(Headers headers) : headers_(std::move(headers)) {}
   explicit HttpResponseHeaders(const std::string &header_string) : headers_(parse(header_string)) {}
 
   const Headers& value() const {
@@ -106,12 +106,12 @@ struct HttpResponseHeaders {
 private:
   Headers headers_;
 
-  Headers parse(const std::string &header_string) {
+  static Headers parse(const std::string &header_string) {
     std::stringstream ss(header_string);
     std::string container;
     Headers headers;
     while(std::getline(ss, container, '\n')) {
-      std::size_t pos = container.find(":");
+      std::size_t pos = container.find(':');
       if (pos != std::string::npos) {
         headers.emplace(
           trim(container.substr(0, pos)),
@@ -127,6 +127,99 @@ struct HttpResponse {
   HttpStatusCode status;
   HttpResponseHeaders headers;
   HttpResponseBody body;
+};
+
+struct HttpUrl {
+  HttpUrl() = default;
+
+  HttpUrl(std::string protocol,
+          std::string host,
+          std::vector<std::string> path_segments = {},
+          std::vector<std::pair<std::string, std::string>> query_parameters = {})
+    : protocol_(std::move(protocol))
+    , host_(std::move(host))
+    , path_segments_(std::move(path_segments))
+    , query_parameters_(std::move(query_parameters))
+    , value_(to_string())
+  { }
+
+  explicit HttpUrl(std::string value)
+    : protocol_(detect_protocol(value))
+    , value_(std::move(value))
+  {}
+
+  [[nodiscard]]
+  const std::string& protocol() {
+    return protocol_;
+  }
+  
+  [[nodiscard]]
+  std::string value() {
+    if (value_.empty()) {
+      value_ = to_string();
+    }
+    return value_;
+  }
+
+  [[nodiscard]]
+  HttpUrl& with_protocol(std::string protocol) {
+    protocol_ = std::move(protocol);
+    return *this;
+  }
+
+  [[nodiscard]]
+  HttpUrl& with_host(std::string host) {
+    host_ = std::move(host);
+    return *this;
+  }
+
+  [[nodiscard]]
+  HttpUrl& with_path_segments(std::vector<std::string> path_segments) {
+    path_segments_ = std::move(path_segments);
+    return *this;
+  }
+
+  [[nodiscard]]
+  HttpUrl& with_query_parameters(std::vector<std::pair<std::string, std::string>> query_parameters) {
+    query_parameters_ = std::move(query_parameters);
+    return *this;
+  }
+
+private:
+  std::string protocol_;
+  std::string host_;
+  std::vector<std::string> path_segments_;
+  std::vector<std::pair<std::string, std::string>> query_parameters_;
+  std::string value_;
+
+  static std::string detect_protocol(const std::string &url_string) {
+    unsigned long i = url_string.find(':');
+    if (i != std::string::npos) {
+      return url_string.substr(0, i);
+    } else {
+      return "unknown";
+    }
+  }
+  
+  [[nodiscard]]
+  std::string to_string() {
+    std::stringstream ss;
+    ss << protocol_ << "://" << host_;
+    if (!path_segments_.empty()) {
+      for (const auto& segment : path_segments_) {
+        ss << "/" << segment;
+      }
+    }
+
+    if (!query_parameters_.empty()) {
+      ss << "?" << query_parameters_[0].first << "=" << query_parameters_[0].second;
+      for (long unsigned int i = 1; i < query_parameters_.size(); ++i) {
+        ss << "&" << query_parameters_[i].first << "=" << query_parameters_[i].second;
+      }
+    }
+
+    return trim(ss.str());
+  }
 };
 
 template<class A>
@@ -210,33 +303,46 @@ HttpStatusCode NOT_EXTENDED = HttpStatusCode{510};
 HttpStatusCode NETWORK_AUTHENTICATION_REQUIRED = HttpStatusCode{511};
 
 struct Client {
-  Client() : error_callback_(NoopErrorCallback), debug_(false) {}
-  explicit Client(bool debug) : error_callback_(NoopErrorCallback), debug_(debug) {}
-  explicit Client(const ErrorCallback error_callback) : error_callback_(error_callback), debug_(false) {}
-  explicit Client(const ErrorCallback error_callback, bool debug) : error_callback_(error_callback), debug_(debug) {}
+  Client() : error_callback_(NoopErrorCallback), debug_(false), verify_(true) {}
+  explicit Client(ErrorCallback error_callback) : error_callback_(std::move(error_callback)), debug_(false), verify_(true) {}
+
+  Client& with_tls_verification(bool verify) {
+    verify_ = verify;
+    return *this;
+  }
+
+  Client& with_debug(bool debug) {
+    debug_ = debug;
+    return *this;
+  }
+
+  Client& with_error_callback(ErrorCallback error_callback) {
+    error_callback_ = std::move(error_callback);
+    return *this;
+  }
 
   [[nodiscard]]
-  std::optional<HttpResponse> get(const Url &url,
+  std::optional<HttpResponse> get(const HttpUrl &url,
                                   const Headers &headers = {}) {
     return get(url, eq(OK), headers);
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> get(const Url &url,
+  std::optional<HttpResponse> get(const HttpUrl &url,
                                   const Predicate<HttpStatusCode> &successPredicate,
                                   const Headers &headers = {}) {
     return execute(url, make_header_callback(headers), NoopCurlSetupCallback, successPredicate);
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> post(const Url &url, 
+  std::optional<HttpResponse> post(const HttpUrl &url,
                                    const HttpRequestBody &body,
                                    const Headers &headers = {}) {
     return post(url, body, eq(OK), headers);
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> post(const Url &url, 
+  std::optional<HttpResponse> post(const HttpUrl &url,
                                    const HttpRequestBody &body,
                                    const Predicate<HttpStatusCode> &successPredicate,
                                    const Headers &headers = {}) {
@@ -248,14 +354,14 @@ struct Client {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> put(const Url &url,
+  std::optional<HttpResponse> put(const HttpUrl &url,
                                   const HttpRequestBody &body,
                                   const Headers &headers = {}) {
     return put(url, body, eq(OK), headers);
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> put(const Url &url,
+  std::optional<HttpResponse> put(const HttpUrl &url,
                                   const HttpRequestBody &body,
                                   const Predicate<HttpStatusCode> &successPredicate,
                                   const Headers &headers = {}) {
@@ -268,13 +374,13 @@ struct Client {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> del(const Url &url,
+  std::optional<HttpResponse> del(const HttpUrl &url,
                                   const Headers &headers = {}) {
     return del(url, eq(OK), headers);
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> del(const Url &url,
+  std::optional<HttpResponse> del(const HttpUrl &url,
                                   const Predicate<HttpStatusCode> &successPredicate,
                                   const Headers &headers = {}) {
     CurlSetupCallback setup = [&](CURL *curl) {
@@ -285,7 +391,7 @@ struct Client {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> head(const Url &url) {
+  std::optional<HttpResponse> head(const HttpUrl &url) {
     CurlSetupCallback setup = [&](CURL *curl) {
       curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
     };
@@ -294,7 +400,7 @@ struct Client {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> options(const Url &url) {
+  std::optional<HttpResponse> options(const HttpUrl &url) {
     CurlSetupCallback setup = [&](CURL *curl) {
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "OPTIONS");
     };
@@ -303,7 +409,7 @@ struct Client {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> trace(const Url &url) {
+  std::optional<HttpResponse> trace(const HttpUrl &url) {
     CurlSetupCallback setup = [&](CURL *curl) {
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "TRACE");
     };
@@ -312,7 +418,7 @@ struct Client {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> execute(const Url &url,
+  std::optional<HttpResponse> execute(HttpUrl url,
                                       const CurlHeaderCallback &curl_header_callback,
                                       const CurlSetupCallback &curl_setup_callback,
                                       const Predicate<HttpStatusCode> &successPredicate) {
@@ -332,6 +438,12 @@ struct Client {
           curl_easy_setopt(curl, CURLOPT_HEADERDATA, &header_buffer);
           curl_easy_setopt(curl, CURLOPT_VERBOSE, debug_);
           curl_setup_callback(curl);
+
+          if (url.protocol() == "https") {
+            verify_
+                ? curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L)
+                : curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+          }
 
           CURLcode res = curl_easy_perform(curl);
           if (res != CURLE_OK) {
@@ -361,6 +473,7 @@ struct Client {
 private:
   ErrorCallback error_callback_;
   bool debug_;
+  bool verify_;
 
   static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     ((std::string *)userp)->append((char *)contents, size * nmemb);
