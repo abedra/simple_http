@@ -64,4 +64,4 @@ target_link_libraries(${PROJECT_NAME} PRIVATE simple_http curl)
 
 ## Advanced Usage
 
-The integration tests are a good source of examples for the features provided by Simple Http. It is recommended to read through the tests to get a better sense for how to consume this library.
+The [integration tests](test/integration_tests.cpp) are a good source of examples for the features provided by Simple Http. It is recommended to read through the tests to get a better sense for how to consume this library.
