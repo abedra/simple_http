@@ -14,7 +14,7 @@ The following example demonstrates an `HTTP GET` request with JSON parsing provi
 int main() {
   SimpleHttp::Client client;
   SimpleHttp::HttpUrl url{"https://jsonplaceholder.typicode.com/users"};
-  const std::optional<SimpleHttp::HttpResponse> &maybeResponse = client.get(url{"https://jsonplaceholder.typicode.com/users"});
+  const std::optional<SimpleHttp::HttpResponse> &maybeResponse = client.get(url);
 
   if (maybeResponse) {
     auto parsed = nlohmann::json::parse(maybeResponse.value().body.value());
