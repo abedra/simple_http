@@ -6,6 +6,7 @@ TEST_CASE("Predicates")
   SECTION("eq")
   {
     SimpleHttp::Predicate<int> subject = SimpleHttp::eq(1);
+
     CHECK(subject(1));
     CHECK(!subject(2));
   }
@@ -13,6 +14,7 @@ TEST_CASE("Predicates")
   SECTION("between_inclusive")
   {
     SimpleHttp::Predicate<int> subject = SimpleHttp::between_inclusive(1, 10);
+
     CHECK(subject(1));
     CHECK(subject(5));
     CHECK(subject(10));
@@ -22,44 +24,54 @@ TEST_CASE("Predicates")
 
   SECTION("informational")
   {
-    CHECK(SimpleHttp::informational(SimpleHttp::CONTINUE));
-    CHECK(SimpleHttp::informational(SimpleHttp::PROCESSING));
-    CHECK(SimpleHttp::informational(SimpleHttp::EARLY_HINTS));
-    CHECK(!SimpleHttp::informational(SimpleHttp::OK));
+    SimpleHttp::Predicate<SimpleHttp::HttpStatusCode> informational = SimpleHttp::informational();
+
+    CHECK(informational(SimpleHttp::CONTINUE));
+    CHECK(informational(SimpleHttp::PROCESSING));
+    CHECK(informational(SimpleHttp::EARLY_HINTS));
+    CHECK(!informational(SimpleHttp::OK));
   }
 
   SECTION("successful")
   {
-    CHECK(SimpleHttp::success(SimpleHttp::OK));
-    CHECK(SimpleHttp::success(SimpleHttp::IM_USED));
-    CHECK(SimpleHttp::success(SimpleHttp::NO_CONTENT));
-    CHECK(!SimpleHttp::success(SimpleHttp::INTERNAL_SERVER_ERROR));
+    SimpleHttp::Predicate<SimpleHttp::HttpStatusCode> successful = SimpleHttp::successful();
+
+    CHECK(successful(SimpleHttp::OK));
+    CHECK(successful(SimpleHttp::IM_USED));
+    CHECK(successful(SimpleHttp::NO_CONTENT));
+    CHECK(!successful(SimpleHttp::INTERNAL_SERVER_ERROR));
 
     //TODO: this exposes the issue with not using an explicit set
-    CHECK(SimpleHttp::success(SimpleHttp::HttpStatusCode{209}));
+    CHECK(successful(SimpleHttp::HttpStatusCode{209}));
   }
 
   SECTION("redirect")
   {
-    CHECK(SimpleHttp::redirect(SimpleHttp::MULTIPLE_CHOICE));
-    CHECK(SimpleHttp::redirect(SimpleHttp::TEMPORARY_REDIRECT));
-    CHECK(SimpleHttp::redirect(SimpleHttp::PERMANENT_REDIRECT));
-    CHECK(!SimpleHttp::redirect(SimpleHttp::OK));
+    SimpleHttp::Predicate<SimpleHttp::HttpStatusCode> redirect = SimpleHttp::redirect();
+
+    CHECK(redirect(SimpleHttp::MULTIPLE_CHOICE));
+    CHECK(redirect(SimpleHttp::TEMPORARY_REDIRECT));
+    CHECK(redirect(SimpleHttp::PERMANENT_REDIRECT));
+    CHECK(!redirect(SimpleHttp::OK));
   }
 
   SECTION("client error")
   {
-    CHECK(SimpleHttp::client_error(SimpleHttp::BAD_REQUEST));
-    CHECK(SimpleHttp::client_error(SimpleHttp::PAYMENT_REQUIRED));
-    CHECK(SimpleHttp::client_error(SimpleHttp::UNAVAILABLE_FOR_LEGAL_REASONS));
-    CHECK(!SimpleHttp::client_error(SimpleHttp::OK));
+    SimpleHttp::Predicate<SimpleHttp::HttpStatusCode> client_error = SimpleHttp::client_error();
+
+    CHECK(client_error(SimpleHttp::BAD_REQUEST));
+    CHECK(client_error(SimpleHttp::PAYMENT_REQUIRED));
+    CHECK(client_error(SimpleHttp::UNAVAILABLE_FOR_LEGAL_REASONS));
+    CHECK(!client_error(SimpleHttp::OK));
   }
 
   SECTION("server error")
   {
-    CHECK(SimpleHttp::server_error(SimpleHttp::INTERNAL_SERVER_ERROR));
-    CHECK(SimpleHttp::server_error(SimpleHttp::GATEWAY_TIMEOUT));
-    CHECK(SimpleHttp::server_error(SimpleHttp::NETWORK_AUTHENTICATION_REQUIRED));
-    CHECK(!SimpleHttp::server_error(SimpleHttp::OK));
+    SimpleHttp::Predicate<SimpleHttp::HttpStatusCode> server_error = SimpleHttp::server_error();
+
+    CHECK(server_error(SimpleHttp::INTERNAL_SERVER_ERROR));
+    CHECK(server_error(SimpleHttp::GATEWAY_TIMEOUT));
+    CHECK(server_error(SimpleHttp::NETWORK_AUTHENTICATION_REQUIRED));
+    CHECK(!server_error(SimpleHttp::OK));
   }
 }

@@ -334,25 +334,24 @@ inline HttpStatusCode LOOP_DETECTED = HttpStatusCode{508};
 inline HttpStatusCode NOT_EXTENDED = HttpStatusCode{510};
 inline HttpStatusCode NETWORK_AUTHENTICATION_REQUIRED = HttpStatusCode{511};
 
-inline bool informational(const HttpStatusCode &subject) {
-  return between_inclusive(CONTINUE, EARLY_HINTS)(subject);
+inline static Predicate<HttpStatusCode> informational() {
+  return between_inclusive(CONTINUE, EARLY_HINTS);
 }
 
-inline bool success(const HttpStatusCode &subject) {
-  // TODO: an exact list would be more correct
-  return between_inclusive(OK, IM_USED)(subject);
+inline static Predicate<HttpStatusCode> successful() {
+  return between_inclusive(OK, IM_USED);
 }
 
-inline bool redirect(const HttpStatusCode &subject) {
-  return between_inclusive(MULTIPLE_CHOICE, PERMANENT_REDIRECT)(subject);
+inline static Predicate<HttpStatusCode> redirect() {
+  return between_inclusive(MULTIPLE_CHOICE, PERMANENT_REDIRECT);
 }
 
-inline bool client_error(const HttpStatusCode &subject) {
-  return between_inclusive(BAD_REQUEST, UNAVAILABLE_FOR_LEGAL_REASONS)(subject);
+inline static Predicate<HttpStatusCode> client_error() {
+  return between_inclusive(BAD_REQUEST, UNAVAILABLE_FOR_LEGAL_REASONS);
 }
 
-inline bool server_error(const HttpStatusCode &subject) {
-  return between_inclusive(INTERNAL_SERVER_ERROR, NETWORK_AUTHENTICATION_REQUIRED)(subject);
+inline static Predicate<HttpStatusCode> server_error() {
+  return between_inclusive(INTERNAL_SERVER_ERROR, NETWORK_AUTHENTICATION_REQUIRED);
 }
 
 struct Client {
