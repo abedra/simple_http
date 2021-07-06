@@ -21,4 +21,4 @@ all: tests
 
 .PHONY: clean
 clean:
-	rm -f test/*.o integration_tests
+	rm -f test/*.o tests

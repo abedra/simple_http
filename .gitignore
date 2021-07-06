@@ -1,6 +1,6 @@
 .vscode
 *.o
-integration_tests
+tests
 venv
 .idea
 cmake-build-debug
