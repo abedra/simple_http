@@ -1,3 +1,5 @@
+#pragma once
+
 #include <curl/curl.h>
 #include <string>
 #include <sstream>
@@ -18,8 +20,24 @@ struct Tiny {
       return os << object.value();
     }
 
-    friend bool operator==(const Tiny& lhs, const Tiny &rhs) {
+    friend bool operator==(const Tiny &lhs, const Tiny &rhs) {
       return lhs.value() == rhs.value();
+    }
+
+    friend bool operator<(const Tiny &lhs, const Tiny &rhs) {
+      return lhs.value() < rhs.value();
+    }
+
+    friend bool operator<=(const Tiny &lhs, const Tiny &rhs) {
+      return lhs.value() <= rhs.value();
+    }
+
+    friend bool operator>(const Tiny &lhs, const Tiny &rhs) {
+      return lhs.value() > rhs.value();
+    }
+
+    friend bool operator>=(const Tiny &lhs, const Tiny &rhs) {
+      return lhs.value() >= rhs.value();
     }
 
     explicit operator A& () const noexcept {
@@ -64,20 +82,19 @@ SIMPLE_HTTP_TINY_LONG(HttpStatusCode)
 #undef SIMPLE_HTTP_TINY_LONG
 
 using CurlSetupCallback = std::function<void(CURL *curl)>;
-CurlSetupCallback NoopCurlSetupCallback = [](auto){};
+inline CurlSetupCallback NoopCurlSetupCallback = [](auto){};
 
 using CurlHeaderCallback = std::function<curl_slist*(curl_slist *chunk)>;
-CurlHeaderCallback NoopCurlHeaderCallback = [](curl_slist *chunk){ return chunk; };
+inline CurlHeaderCallback NoopCurlHeaderCallback = [](curl_slist *chunk){ return chunk; };
 
 using ErrorCallback = std::function<void(const std::string&)>;
-ErrorCallback NoopErrorCallback = [](auto&){};
+inline ErrorCallback NoopErrorCallback = [](auto&){};
 
 using Headers = std::unordered_map<std::string, std::string>;
-
 using PathSegments = std::vector<PathSegment>;
 using QueryParameters = std::vector<std::pair<QueryParameterKey, QueryParameterValue>>;
 
-static const std::string WHITESPACE = "\n\t\f\v\r ";
+inline static const std::string WHITESPACE = "\n\t\f\v\r ";
 
 static std::string leftTrim(const std::string &candidate) {
   size_t start = candidate.find_first_not_of(WHITESPACE);
@@ -154,7 +171,7 @@ struct HttpUrl {
   explicit HttpUrl(std::string value)
     : protocol_(detect_protocol(value))
     , value_(std::move(value))
-  {}
+  { }
 
   [[nodiscard]]
   const Protcol & protocol() {
@@ -240,75 +257,103 @@ Predicate<A> eq(const A &a) {
   };
 }
 
+template<class A>
+Predicate<A> between_inclusive(const A &a, const A &b) {
+  return [a, b](const A &other) {
+    return other >= a && other <= b;
+  };
+}
+
 // Information Responses
-HttpStatusCode CONTINUE = HttpStatusCode{100};
-HttpStatusCode SWITCHING_PROTOCOL = HttpStatusCode{101};
-HttpStatusCode PROCESSING = HttpStatusCode{102};
-HttpStatusCode EARLY_HINTS = HttpStatusCode{103};
+inline HttpStatusCode CONTINUE = HttpStatusCode{100};
+inline HttpStatusCode SWITCHING_PROTOCOL = HttpStatusCode{101};
+inline HttpStatusCode PROCESSING = HttpStatusCode{102};
+inline HttpStatusCode EARLY_HINTS = HttpStatusCode{103};
 
 // Successful Responses
-HttpStatusCode OK = HttpStatusCode{200};
-HttpStatusCode CREATED = HttpStatusCode{201};
-HttpStatusCode ACCEPTED = HttpStatusCode{202};
-HttpStatusCode NON_AUTHORITATIVE_INFORMATION = HttpStatusCode{203};
-HttpStatusCode NO_CONTENT = HttpStatusCode{204};
-HttpStatusCode RESET_CONTENT = HttpStatusCode{205};
-HttpStatusCode PARTIAL_CONTENT = HttpStatusCode{206};
-HttpStatusCode MULTI_STATUS = HttpStatusCode{207};
-HttpStatusCode ALREADY_REPORTED = HttpStatusCode{208};
-HttpStatusCode IM_USED = HttpStatusCode{226};
+inline HttpStatusCode OK = HttpStatusCode{200};
+inline HttpStatusCode CREATED = HttpStatusCode{201};
+inline HttpStatusCode ACCEPTED = HttpStatusCode{202};
+inline HttpStatusCode NON_AUTHORITATIVE_INFORMATION = HttpStatusCode{203};
+inline HttpStatusCode NO_CONTENT = HttpStatusCode{204};
+inline HttpStatusCode RESET_CONTENT = HttpStatusCode{205};
+inline HttpStatusCode PARTIAL_CONTENT = HttpStatusCode{206};
+inline HttpStatusCode MULTI_STATUS = HttpStatusCode{207};
+inline HttpStatusCode ALREADY_REPORTED = HttpStatusCode{208};
+inline HttpStatusCode IM_USED = HttpStatusCode{226};
 
 // Redirection Messages
-HttpStatusCode MULTIPLE_CHOICE = HttpStatusCode{300};
-HttpStatusCode MOVED_PERMANENTLY = HttpStatusCode{301};
-HttpStatusCode FOUND = HttpStatusCode{302};
-HttpStatusCode SEE_OTHER = HttpStatusCode{303};
-HttpStatusCode NOT_MODIFIED = HttpStatusCode{304};
-HttpStatusCode USE_PROXY = HttpStatusCode{305};
-HttpStatusCode TEMPORARY_REDIRECT = HttpStatusCode{307};
-HttpStatusCode PERMANENT_REDIRECT = HttpStatusCode{308};
+inline HttpStatusCode MULTIPLE_CHOICE = HttpStatusCode{300};
+inline HttpStatusCode MOVED_PERMANENTLY = HttpStatusCode{301};
+inline HttpStatusCode FOUND = HttpStatusCode{302};
+inline HttpStatusCode SEE_OTHER = HttpStatusCode{303};
+inline HttpStatusCode NOT_MODIFIED = HttpStatusCode{304};
+inline HttpStatusCode USE_PROXY = HttpStatusCode{305};
+inline HttpStatusCode TEMPORARY_REDIRECT = HttpStatusCode{307};
+inline HttpStatusCode PERMANENT_REDIRECT = HttpStatusCode{308};
 
 // Client Error Responses
-HttpStatusCode BAD_REQUEST = HttpStatusCode{400};
-HttpStatusCode UNAUTHORIZED = HttpStatusCode{401};
-HttpStatusCode PAYMENT_REQUIRED = HttpStatusCode{402};
-HttpStatusCode FORBIDDEN = HttpStatusCode{403};
-HttpStatusCode NOT_FOUND = HttpStatusCode{404};
-HttpStatusCode METHOD_NOT_ALLOWED = HttpStatusCode{405};
-HttpStatusCode NOT_ACCEPTABLE = HttpStatusCode{406};
-HttpStatusCode PROXY_AUTHENTICATION_REQUIRED = HttpStatusCode{407};
-HttpStatusCode REQUEST_TIMEOUT = HttpStatusCode{408};
-HttpStatusCode CONFLICT = HttpStatusCode{409};
-HttpStatusCode GONE = HttpStatusCode{410};
-HttpStatusCode LENGTH_REQUIRED = HttpStatusCode{411};
-HttpStatusCode PRECONDITION_FAILED = HttpStatusCode{412};
-HttpStatusCode PAYLOAD_TOO_LARGE = HttpStatusCode{413};
-HttpStatusCode URI_TOO_LONG = HttpStatusCode{414};
-HttpStatusCode UNSUPPORTED_MEDIA_TYPE = HttpStatusCode{415};
-HttpStatusCode RANGE_NOT_SATISFIABLE = HttpStatusCode{416};
-HttpStatusCode EXPECTATION_FAILED = HttpStatusCode{417};
-HttpStatusCode IM_A_TEAPOT = HttpStatusCode{418};
-HttpStatusCode UNPROCESSABLE_ENTITY = HttpStatusCode{422};
-HttpStatusCode FAILED_DEPENDENCY = HttpStatusCode{424};
-HttpStatusCode TOO_EARLY = HttpStatusCode{425};
-HttpStatusCode UPGRADE_REQUIRED = HttpStatusCode{426};
-HttpStatusCode PRECONDITION_REQUIRED = HttpStatusCode{428};
-HttpStatusCode TOO_MANY_REQUESTS = HttpStatusCode{429};
-HttpStatusCode REQUEST_HEADER_FIELDS_TOO_LARGE = HttpStatusCode{431};
-HttpStatusCode UNAVAILABLE_FOR_LEGAL_REASONS = HttpStatusCode{451};
+inline HttpStatusCode BAD_REQUEST = HttpStatusCode{400};
+inline HttpStatusCode UNAUTHORIZED = HttpStatusCode{401};
+inline HttpStatusCode PAYMENT_REQUIRED = HttpStatusCode{402};
+inline HttpStatusCode FORBIDDEN = HttpStatusCode{403};
+inline HttpStatusCode NOT_FOUND = HttpStatusCode{404};
+inline HttpStatusCode METHOD_NOT_ALLOWED = HttpStatusCode{405};
+inline HttpStatusCode NOT_ACCEPTABLE = HttpStatusCode{406};
+inline HttpStatusCode PROXY_AUTHENTICATION_REQUIRED = HttpStatusCode{407};
+inline HttpStatusCode REQUEST_TIMEOUT = HttpStatusCode{408};
+inline HttpStatusCode CONFLICT = HttpStatusCode{409};
+inline HttpStatusCode GONE = HttpStatusCode{410};
+inline HttpStatusCode LENGTH_REQUIRED = HttpStatusCode{411};
+inline HttpStatusCode PRECONDITION_FAILED = HttpStatusCode{412};
+inline HttpStatusCode PAYLOAD_TOO_LARGE = HttpStatusCode{413};
+inline HttpStatusCode URI_TOO_LONG = HttpStatusCode{414};
+inline HttpStatusCode UNSUPPORTED_MEDIA_TYPE = HttpStatusCode{415};
+inline HttpStatusCode RANGE_NOT_SATISFIABLE = HttpStatusCode{416};
+inline HttpStatusCode EXPECTATION_FAILED = HttpStatusCode{417};
+inline HttpStatusCode IM_A_TEAPOT = HttpStatusCode{418};
+inline HttpStatusCode UNPROCESSABLE_ENTITY = HttpStatusCode{422};
+inline HttpStatusCode FAILED_DEPENDENCY = HttpStatusCode{424};
+inline HttpStatusCode TOO_EARLY = HttpStatusCode{425};
+inline HttpStatusCode UPGRADE_REQUIRED = HttpStatusCode{426};
+inline HttpStatusCode PRECONDITION_REQUIRED = HttpStatusCode{428};
+inline HttpStatusCode TOO_MANY_REQUESTS = HttpStatusCode{429};
+inline HttpStatusCode REQUEST_HEADER_FIELDS_TOO_LARGE = HttpStatusCode{431};
+inline HttpStatusCode UNAVAILABLE_FOR_LEGAL_REASONS = HttpStatusCode{451};
 
 // Server Error Responses
-HttpStatusCode INTERNAL_SERVER_ERROR = HttpStatusCode{500};
-HttpStatusCode NOT_IMPLEMENTED = HttpStatusCode{501};
-HttpStatusCode BAD_GATEWAY = HttpStatusCode{502};
-HttpStatusCode SERVICE_UNAVAILABLE = HttpStatusCode{503};
-HttpStatusCode GATEWAY_TIMEOUT = HttpStatusCode{504};
-HttpStatusCode HTTP_VERSION_NOT_SUPPORTED = HttpStatusCode{505};
-HttpStatusCode VARIANT_ALSO_NEGOTIATES = HttpStatusCode{506};
-HttpStatusCode INSUFFICIENT_STORAGE = HttpStatusCode{507};
-HttpStatusCode LOOP_DETECTED = HttpStatusCode{508};
-HttpStatusCode NOT_EXTENDED = HttpStatusCode{510};
-HttpStatusCode NETWORK_AUTHENTICATION_REQUIRED = HttpStatusCode{511};
+inline HttpStatusCode INTERNAL_SERVER_ERROR = HttpStatusCode{500};
+inline HttpStatusCode NOT_IMPLEMENTED = HttpStatusCode{501};
+inline HttpStatusCode BAD_GATEWAY = HttpStatusCode{502};
+inline HttpStatusCode SERVICE_UNAVAILABLE = HttpStatusCode{503};
+inline HttpStatusCode GATEWAY_TIMEOUT = HttpStatusCode{504};
+inline HttpStatusCode HTTP_VERSION_NOT_SUPPORTED = HttpStatusCode{505};
+inline HttpStatusCode VARIANT_ALSO_NEGOTIATES = HttpStatusCode{506};
+inline HttpStatusCode INSUFFICIENT_STORAGE = HttpStatusCode{507};
+inline HttpStatusCode LOOP_DETECTED = HttpStatusCode{508};
+inline HttpStatusCode NOT_EXTENDED = HttpStatusCode{510};
+inline HttpStatusCode NETWORK_AUTHENTICATION_REQUIRED = HttpStatusCode{511};
+
+inline bool informational(const HttpStatusCode &subject) {
+  return between_inclusive(CONTINUE, EARLY_HINTS)(subject);
+}
+
+inline bool success(const HttpStatusCode &subject) {
+  // TODO: an exact list would be more correct
+  return between_inclusive(OK, IM_USED)(subject);
+}
+
+inline bool redirect(const HttpStatusCode &subject) {
+  return between_inclusive(MULTIPLE_CHOICE, PERMANENT_REDIRECT)(subject);
+}
+
+inline bool client_error(const HttpStatusCode &subject) {
+  return between_inclusive(BAD_REQUEST, UNAVAILABLE_FOR_LEGAL_REASONS)(subject);
+}
+
+inline bool server_error(const HttpStatusCode &subject) {
+  return between_inclusive(INTERNAL_SERVER_ERROR, NETWORK_AUTHENTICATION_REQUIRED)(subject);
+}
 
 struct Client {
   Client() : error_callback_(NoopErrorCallback), debug_(false), verify_(true) {}
