@@ -81,14 +81,14 @@ TEST_CASE("Trimming") {
   {
     std::string candidate = "\n  test";
     CHECK(candidate != "test");
-    CHECK(SimpleHttp::leftTrim(candidate) == "test");
+    CHECK(SimpleHttp::left_trim(candidate) == "test");
   }
 
   SECTION("Right Trim")
   {
     std::string candidate = "test \r\n";
     CHECK(candidate != "test");
-    CHECK(SimpleHttp::rightTrim(candidate) == "test");
+    CHECK(SimpleHttp::right_trim(candidate) == "test");
   }
 
   SECTION("Trim")

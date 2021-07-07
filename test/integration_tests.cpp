@@ -131,4 +131,21 @@ TEST_CASE("Integration Tests")
 
     CHECK(keys["get"] == "ok");
   }
+
+  SECTION("Wrap Response")
+  {
+    auto maybe_response = client.get(url.with_path_segments({SimpleHttp::PathSegment{"get"}}),
+                                     SimpleHttp::successful());
+
+    REQUIRE(maybe_response);
+
+    std::function<std::string(const std::optional<SimpleHttp::HttpResponse> &response)> capture_get = [&maybe_response](const auto &response) {
+      auto keys = nlohmann::json::parse(maybe_response.value().body.value());
+      return keys["get"];
+    };
+
+    auto wrapped = SimpleHttp::wrap_response<std::string>(maybe_response, capture_get);
+
+    CHECK(wrapped == "ok");
+  }
 }

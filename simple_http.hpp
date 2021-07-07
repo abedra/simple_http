@@ -50,7 +50,7 @@ struct Tiny {
     }
 
     [[nodiscard]]
-    std::string toString() const {
+    std::string to_string() const {
       std::ostringstream ss;
       ss << value();
       return ss.str();
@@ -96,18 +96,18 @@ using QueryParameters = std::vector<std::pair<QueryParameterKey, QueryParameterV
 
 inline static const std::string WHITESPACE = "\n\t\f\v\r ";
 
-inline static std::string leftTrim(const std::string &candidate) {
+inline static std::string left_trim(const std::string &candidate) {
   size_t start = candidate.find_first_not_of(WHITESPACE);
   return (start == std::string::npos) ? "" : candidate.substr(start);
 }
 
-inline static std::string rightTrim(const std::string &candidate) {
+inline static std::string right_trim(const std::string &candidate) {
   size_t end = candidate.find_last_not_of(WHITESPACE);
   return (end == std::string::npos) ? "" : candidate.substr(0, end + 1);
 }
 
 inline static std::string trim(const std::string &candidate) {
-  return rightTrim(leftTrim(candidate));
+  return right_trim(left_trim(candidate));
 }
 
 inline static std::vector<std::string> vec(const std::string& candidate, const char separator) {
@@ -352,6 +352,12 @@ inline static Predicate<HttpStatusCode> client_error() {
 
 inline static Predicate<HttpStatusCode> server_error() {
   return between_inclusive(INTERNAL_SERVER_ERROR, NETWORK_AUTHENTICATION_REQUIRED);
+}
+
+template<class A>
+A wrap_response(std::optional<HttpResponse> response,
+               std::function<A(const std::optional<HttpResponse> &response)> wrapperFn) {
+  return wrapperFn(response);
 }
 
 struct Client final {
