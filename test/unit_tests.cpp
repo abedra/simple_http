@@ -75,3 +75,32 @@ TEST_CASE("Predicates")
     CHECK(!server_error(SimpleHttp::OK));
   }
 }
+
+TEST_CASE("Trimming") {
+  SECTION("Left Trim")
+  {
+    std::string candidate = "\n  test";
+    CHECK(candidate != "test");
+    CHECK(SimpleHttp::leftTrim(candidate) == "test");
+  }
+
+  SECTION("Right Trim")
+  {
+    std::string candidate = "test \r\n";
+    CHECK(candidate != "test");
+    CHECK(SimpleHttp::rightTrim(candidate) == "test");
+  }
+
+  SECTION("Trim")
+  {
+    std::string candidate = "\v test \f";
+    CHECK(candidate != "test");
+    CHECK(SimpleHttp::trim(candidate) == "test");
+  }
+
+  SECTION("Only trims at the outermost parts")
+  {
+    std::string candidate = "\t the \n thing \r works \v in \r\n  ways \f\f\n";
+    CHECK(SimpleHttp::trim(candidate) == "the \n thing \r works \v in \r\n  ways");
+  }
+}
