@@ -82,13 +82,13 @@ SIMPLE_HTTP_TINY_LONG(HttpStatusCode)
 #undef SIMPLE_HTTP_TINY_LONG
 
 using CurlSetupCallback = std::function<void(CURL *curl)>;
-inline CurlSetupCallback NoopCurlSetupCallback = [](auto){};
+inline static CurlSetupCallback NoopCurlSetupCallback = [](auto){};
 
 using CurlHeaderCallback = std::function<curl_slist*(curl_slist *chunk)>;
-inline CurlHeaderCallback NoopCurlHeaderCallback = [](curl_slist *chunk){ return chunk; };
+inline static CurlHeaderCallback NoopCurlHeaderCallback = [](curl_slist *chunk){ return chunk; };
 
 using ErrorCallback = std::function<void(const std::string&)>;
-inline ErrorCallback NoopErrorCallback = [](auto&){};
+inline static ErrorCallback NoopErrorCallback = [](auto&){};
 
 using Headers = std::unordered_map<std::string, std::string>;
 using PathSegments = std::vector<PathSegment>;
@@ -96,21 +96,21 @@ using QueryParameters = std::vector<std::pair<QueryParameterKey, QueryParameterV
 
 inline static const std::string WHITESPACE = "\n\t\f\v\r ";
 
-static std::string leftTrim(const std::string &candidate) {
+inline static std::string leftTrim(const std::string &candidate) {
   size_t start = candidate.find_first_not_of(WHITESPACE);
   return (start == std::string::npos) ? "" : candidate.substr(start);
 }
 
-static std::string rightTrim(const std::string &candidate) {
+inline static std::string rightTrim(const std::string &candidate) {
   size_t end = candidate.find_last_not_of(WHITESPACE);
   return (end == std::string::npos) ? "" : candidate.substr(0, end + 1);
 }
 
-static std::string trim(const std::string &candidate) {
+inline static std::string trim(const std::string &candidate) {
   return rightTrim(leftTrim(candidate));
 }
 
-static std::vector<std::string> vec(const std::string& candidate, const char separator) {
+inline static std::vector<std::string> vec(const std::string& candidate, const char separator) {
   std::vector<std::string> container;
   std::stringstream ss(candidate);
   std::string temp;
@@ -120,7 +120,7 @@ static std::vector<std::string> vec(const std::string& candidate, const char sep
   return container;
 }
 
-struct HttpResponseHeaders {
+struct HttpResponseHeaders final {
   explicit HttpResponseHeaders(Headers headers) : headers_(std::move(headers)) {}
   explicit HttpResponseHeaders(const std::string &header_string) : headers_(parse(header_string)) {}
 
@@ -148,13 +148,13 @@ private:
   }
 };
 
-struct HttpResponse {
+struct HttpResponse final {
   HttpStatusCode status;
   HttpResponseHeaders headers;
   HttpResponseBody body;
 };
 
-struct HttpUrl {
+struct HttpUrl final {
   HttpUrl() = default;
 
   HttpUrl(Protcol protocol,
@@ -265,74 +265,74 @@ Predicate<A> between_inclusive(const A &a, const A &b) {
 }
 
 // Information Responses
-inline HttpStatusCode CONTINUE = HttpStatusCode{100};
-inline HttpStatusCode SWITCHING_PROTOCOL = HttpStatusCode{101};
-inline HttpStatusCode PROCESSING = HttpStatusCode{102};
-inline HttpStatusCode EARLY_HINTS = HttpStatusCode{103};
+inline static HttpStatusCode CONTINUE = HttpStatusCode{100};
+inline static HttpStatusCode SWITCHING_PROTOCOL = HttpStatusCode{101};
+inline static HttpStatusCode PROCESSING = HttpStatusCode{102};
+inline static HttpStatusCode EARLY_HINTS = HttpStatusCode{103};
 
 // Successful Responses
-inline HttpStatusCode OK = HttpStatusCode{200};
-inline HttpStatusCode CREATED = HttpStatusCode{201};
-inline HttpStatusCode ACCEPTED = HttpStatusCode{202};
-inline HttpStatusCode NON_AUTHORITATIVE_INFORMATION = HttpStatusCode{203};
-inline HttpStatusCode NO_CONTENT = HttpStatusCode{204};
-inline HttpStatusCode RESET_CONTENT = HttpStatusCode{205};
-inline HttpStatusCode PARTIAL_CONTENT = HttpStatusCode{206};
-inline HttpStatusCode MULTI_STATUS = HttpStatusCode{207};
-inline HttpStatusCode ALREADY_REPORTED = HttpStatusCode{208};
-inline HttpStatusCode IM_USED = HttpStatusCode{226};
+inline static HttpStatusCode OK = HttpStatusCode{200};
+inline static HttpStatusCode CREATED = HttpStatusCode{201};
+inline static HttpStatusCode ACCEPTED = HttpStatusCode{202};
+inline static HttpStatusCode NON_AUTHORITATIVE_INFORMATION = HttpStatusCode{203};
+inline static HttpStatusCode NO_CONTENT = HttpStatusCode{204};
+inline static HttpStatusCode RESET_CONTENT = HttpStatusCode{205};
+inline static HttpStatusCode PARTIAL_CONTENT = HttpStatusCode{206};
+inline static HttpStatusCode MULTI_STATUS = HttpStatusCode{207};
+inline static HttpStatusCode ALREADY_REPORTED = HttpStatusCode{208};
+inline static HttpStatusCode IM_USED = HttpStatusCode{226};
 
 // Redirection Messages
-inline HttpStatusCode MULTIPLE_CHOICE = HttpStatusCode{300};
-inline HttpStatusCode MOVED_PERMANENTLY = HttpStatusCode{301};
-inline HttpStatusCode FOUND = HttpStatusCode{302};
-inline HttpStatusCode SEE_OTHER = HttpStatusCode{303};
-inline HttpStatusCode NOT_MODIFIED = HttpStatusCode{304};
-inline HttpStatusCode USE_PROXY = HttpStatusCode{305};
-inline HttpStatusCode TEMPORARY_REDIRECT = HttpStatusCode{307};
-inline HttpStatusCode PERMANENT_REDIRECT = HttpStatusCode{308};
+inline static HttpStatusCode MULTIPLE_CHOICE = HttpStatusCode{300};
+inline static HttpStatusCode MOVED_PERMANENTLY = HttpStatusCode{301};
+inline static HttpStatusCode FOUND = HttpStatusCode{302};
+inline static HttpStatusCode SEE_OTHER = HttpStatusCode{303};
+inline static HttpStatusCode NOT_MODIFIED = HttpStatusCode{304};
+inline static HttpStatusCode USE_PROXY = HttpStatusCode{305};
+inline static HttpStatusCode TEMPORARY_REDIRECT = HttpStatusCode{307};
+inline static HttpStatusCode PERMANENT_REDIRECT = HttpStatusCode{308};
 
 // Client Error Responses
-inline HttpStatusCode BAD_REQUEST = HttpStatusCode{400};
-inline HttpStatusCode UNAUTHORIZED = HttpStatusCode{401};
-inline HttpStatusCode PAYMENT_REQUIRED = HttpStatusCode{402};
-inline HttpStatusCode FORBIDDEN = HttpStatusCode{403};
-inline HttpStatusCode NOT_FOUND = HttpStatusCode{404};
-inline HttpStatusCode METHOD_NOT_ALLOWED = HttpStatusCode{405};
-inline HttpStatusCode NOT_ACCEPTABLE = HttpStatusCode{406};
-inline HttpStatusCode PROXY_AUTHENTICATION_REQUIRED = HttpStatusCode{407};
-inline HttpStatusCode REQUEST_TIMEOUT = HttpStatusCode{408};
-inline HttpStatusCode CONFLICT = HttpStatusCode{409};
-inline HttpStatusCode GONE = HttpStatusCode{410};
-inline HttpStatusCode LENGTH_REQUIRED = HttpStatusCode{411};
-inline HttpStatusCode PRECONDITION_FAILED = HttpStatusCode{412};
-inline HttpStatusCode PAYLOAD_TOO_LARGE = HttpStatusCode{413};
-inline HttpStatusCode URI_TOO_LONG = HttpStatusCode{414};
-inline HttpStatusCode UNSUPPORTED_MEDIA_TYPE = HttpStatusCode{415};
-inline HttpStatusCode RANGE_NOT_SATISFIABLE = HttpStatusCode{416};
-inline HttpStatusCode EXPECTATION_FAILED = HttpStatusCode{417};
-inline HttpStatusCode IM_A_TEAPOT = HttpStatusCode{418};
-inline HttpStatusCode UNPROCESSABLE_ENTITY = HttpStatusCode{422};
-inline HttpStatusCode FAILED_DEPENDENCY = HttpStatusCode{424};
-inline HttpStatusCode TOO_EARLY = HttpStatusCode{425};
-inline HttpStatusCode UPGRADE_REQUIRED = HttpStatusCode{426};
-inline HttpStatusCode PRECONDITION_REQUIRED = HttpStatusCode{428};
-inline HttpStatusCode TOO_MANY_REQUESTS = HttpStatusCode{429};
-inline HttpStatusCode REQUEST_HEADER_FIELDS_TOO_LARGE = HttpStatusCode{431};
-inline HttpStatusCode UNAVAILABLE_FOR_LEGAL_REASONS = HttpStatusCode{451};
+inline static HttpStatusCode BAD_REQUEST = HttpStatusCode{400};
+inline static HttpStatusCode UNAUTHORIZED = HttpStatusCode{401};
+inline static HttpStatusCode PAYMENT_REQUIRED = HttpStatusCode{402};
+inline static HttpStatusCode FORBIDDEN = HttpStatusCode{403};
+inline static HttpStatusCode NOT_FOUND = HttpStatusCode{404};
+inline static HttpStatusCode METHOD_NOT_ALLOWED = HttpStatusCode{405};
+inline static HttpStatusCode NOT_ACCEPTABLE = HttpStatusCode{406};
+inline static HttpStatusCode PROXY_AUTHENTICATION_REQUIRED = HttpStatusCode{407};
+inline static HttpStatusCode REQUEST_TIMEOUT = HttpStatusCode{408};
+inline static HttpStatusCode CONFLICT = HttpStatusCode{409};
+inline static HttpStatusCode GONE = HttpStatusCode{410};
+inline static HttpStatusCode LENGTH_REQUIRED = HttpStatusCode{411};
+inline static HttpStatusCode PRECONDITION_FAILED = HttpStatusCode{412};
+inline static HttpStatusCode PAYLOAD_TOO_LARGE = HttpStatusCode{413};
+inline static HttpStatusCode URI_TOO_LONG = HttpStatusCode{414};
+inline static HttpStatusCode UNSUPPORTED_MEDIA_TYPE = HttpStatusCode{415};
+inline static HttpStatusCode RANGE_NOT_SATISFIABLE = HttpStatusCode{416};
+inline static HttpStatusCode EXPECTATION_FAILED = HttpStatusCode{417};
+inline static HttpStatusCode IM_A_TEAPOT = HttpStatusCode{418};
+inline static HttpStatusCode UNPROCESSABLE_ENTITY = HttpStatusCode{422};
+inline static HttpStatusCode FAILED_DEPENDENCY = HttpStatusCode{424};
+inline static HttpStatusCode TOO_EARLY = HttpStatusCode{425};
+inline static HttpStatusCode UPGRADE_REQUIRED = HttpStatusCode{426};
+inline static HttpStatusCode PRECONDITION_REQUIRED = HttpStatusCode{428};
+inline static HttpStatusCode TOO_MANY_REQUESTS = HttpStatusCode{429};
+inline static HttpStatusCode REQUEST_HEADER_FIELDS_TOO_LARGE = HttpStatusCode{431};
+inline static HttpStatusCode UNAVAILABLE_FOR_LEGAL_REASONS = HttpStatusCode{451};
 
 // Server Error Responses
-inline HttpStatusCode INTERNAL_SERVER_ERROR = HttpStatusCode{500};
-inline HttpStatusCode NOT_IMPLEMENTED = HttpStatusCode{501};
-inline HttpStatusCode BAD_GATEWAY = HttpStatusCode{502};
-inline HttpStatusCode SERVICE_UNAVAILABLE = HttpStatusCode{503};
-inline HttpStatusCode GATEWAY_TIMEOUT = HttpStatusCode{504};
-inline HttpStatusCode HTTP_VERSION_NOT_SUPPORTED = HttpStatusCode{505};
-inline HttpStatusCode VARIANT_ALSO_NEGOTIATES = HttpStatusCode{506};
-inline HttpStatusCode INSUFFICIENT_STORAGE = HttpStatusCode{507};
-inline HttpStatusCode LOOP_DETECTED = HttpStatusCode{508};
-inline HttpStatusCode NOT_EXTENDED = HttpStatusCode{510};
-inline HttpStatusCode NETWORK_AUTHENTICATION_REQUIRED = HttpStatusCode{511};
+inline static HttpStatusCode INTERNAL_SERVER_ERROR = HttpStatusCode{500};
+inline static HttpStatusCode NOT_IMPLEMENTED = HttpStatusCode{501};
+inline static HttpStatusCode BAD_GATEWAY = HttpStatusCode{502};
+inline static HttpStatusCode SERVICE_UNAVAILABLE = HttpStatusCode{503};
+inline static HttpStatusCode GATEWAY_TIMEOUT = HttpStatusCode{504};
+inline static HttpStatusCode HTTP_VERSION_NOT_SUPPORTED = HttpStatusCode{505};
+inline static HttpStatusCode VARIANT_ALSO_NEGOTIATES = HttpStatusCode{506};
+inline static HttpStatusCode INSUFFICIENT_STORAGE = HttpStatusCode{507};
+inline static HttpStatusCode LOOP_DETECTED = HttpStatusCode{508};
+inline static HttpStatusCode NOT_EXTENDED = HttpStatusCode{510};
+inline static HttpStatusCode NETWORK_AUTHENTICATION_REQUIRED = HttpStatusCode{511};
 
 inline static Predicate<HttpStatusCode> informational() {
   return between_inclusive(CONTINUE, EARLY_HINTS);
@@ -354,7 +354,7 @@ inline static Predicate<HttpStatusCode> server_error() {
   return between_inclusive(INTERNAL_SERVER_ERROR, NETWORK_AUTHENTICATION_REQUIRED);
 }
 
-struct Client {
+struct Client final {
   Client() : error_callback_(NoopErrorCallback), debug_(false), verify_(true) {}
   explicit Client(ErrorCallback error_callback) : error_callback_(std::move(error_callback)), debug_(false), verify_(true) {}
 
