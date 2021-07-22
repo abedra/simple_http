@@ -13,7 +13,7 @@ TEST_CASE("Integration Tests")
 
   SECTION("GET Request")
   {
-    auto maybe_response = client.get(url.with_path_segments({SimpleHttp::PathSegment{"get"}}));
+    auto maybe_response = client.get(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}));
 
     REQUIRE(maybe_response);
 
@@ -25,7 +25,7 @@ TEST_CASE("Integration Tests")
 
   SECTION("Post request")
   {
-    auto maybe_response = client.post(url.with_path_segments({SimpleHttp::PathSegment{"post"}}),
+    auto maybe_response = client.post(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"post"}}}),
                                       SimpleHttp::HttpRequestBody{R"({"name":"test"})"},
                                       {{"Content-Type", "application/json"}});
 
@@ -39,7 +39,7 @@ TEST_CASE("Integration Tests")
 
   SECTION("Put request")
   {
-    auto maybe_response = client.put(url.with_path_segments({SimpleHttp::PathSegment{"put"}}),
+    auto maybe_response = client.put(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"put"}}}),
                                      SimpleHttp::HttpRequestBody{R"({"update":"test"})"},
                                      {{"Content-Type", "application/json"}});
 
@@ -53,7 +53,7 @@ TEST_CASE("Integration Tests")
 
   SECTION("Delete request")
   {
-    auto maybe_response = client.del(url.with_path_segments({SimpleHttp::PathSegment{"delete"}}));
+    auto maybe_response = client.del(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"delete"}}}));
 
     REQUIRE(maybe_response);
     CHECK(maybe_response.value().status == SimpleHttp::OK);
@@ -61,7 +61,7 @@ TEST_CASE("Integration Tests")
 
   SECTION("Head request")
   {
-    auto maybe_response = client.head(url.with_path_segments({SimpleHttp::PathSegment{"get"}}));
+    auto maybe_response = client.head(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}));
 
     REQUIRE(maybe_response);
     CHECK(maybe_response.value().status == SimpleHttp::OK);
@@ -69,7 +69,7 @@ TEST_CASE("Integration Tests")
 
   SECTION("Options request")
   {
-    auto maybe_response = client.options(url.with_path_segments({SimpleHttp::PathSegment{"get"}}));
+    auto maybe_response = client.options(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}));
 
     REQUIRE(maybe_response);
 
@@ -80,7 +80,7 @@ TEST_CASE("Integration Tests")
 
   SECTION("Trace request")
   {
-    auto maybe_response = client.trace(url.with_path_segments({SimpleHttp::PathSegment{"trace"}}));
+    auto maybe_response = client.trace(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"trace"}}}));
 
     REQUIRE(maybe_response);
     CHECK(maybe_response.value().headers.value().at("Content-Type") == "message/http");
@@ -98,7 +98,7 @@ TEST_CASE("Integration Tests")
 
   SECTION("Post request that expects a 204 NO_CONTENT response")
   {
-    auto maybe_response = client.post(url.with_path_segments({SimpleHttp::PathSegment{"empty_post_response"}}),
+    auto maybe_response = client.post(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"empty_post_response"}}}),
                                       SimpleHttp::HttpRequestBody{""},
                                       SimpleHttp::eq(SimpleHttp::NO_CONTENT),
                                       {{"Content-Type", "application/json"}});
@@ -113,7 +113,7 @@ TEST_CASE("Integration Tests")
 
   SECTION("Get request that expects a 405 METHOD_NOT_ALLOWED response")
   {
-    auto maybe_response = client.get(url.with_path_segments({SimpleHttp::PathSegment{"empty_post_response"}}),
+    auto maybe_response = client.get(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"empty_post_response"}}}),
                                      SimpleHttp::eq(SimpleHttp::METHOD_NOT_ALLOWED));
 
     REQUIRE(maybe_response);
@@ -122,7 +122,7 @@ TEST_CASE("Integration Tests")
 
   SECTION("Ranged response success predicate")
   {
-    auto maybe_response = client.get(url.with_path_segments({SimpleHttp::PathSegment{"get"}}),
+    auto maybe_response = client.get(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}),
                                      SimpleHttp::successful());
 
     REQUIRE(maybe_response);
@@ -134,7 +134,7 @@ TEST_CASE("Integration Tests")
 
   SECTION("Wrap Response")
   {
-    auto maybe_response = client.get(url.with_path_segments({SimpleHttp::PathSegment{"get"}}),
+    auto maybe_response = client.get(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}),
                                      SimpleHttp::successful());
 
     REQUIRE(maybe_response);

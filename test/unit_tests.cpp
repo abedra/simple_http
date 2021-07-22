@@ -104,3 +104,69 @@ TEST_CASE("Trimming") {
     CHECK(SimpleHttp::trim(candidate) == "the \n thing \r works \v in \r\n  ways");
   }
 }
+
+TEST_CASE("PathSegments") {
+  SECTION("Path segments to_string no segments")
+  {
+    CHECK(SimpleHttp::PathSegments{}.to_string().empty());
+  }
+
+  SECTION("Path segments to_string one segment")
+  {
+    SimpleHttp::PathSegments segments{{SimpleHttp::PathSegment{"one"}}};
+    CHECK(segments.to_string() == "/one");
+  }
+
+  SECTION("Path segments to_string multiple segment")
+  {
+    SimpleHttp::PathSegments segments{{
+      SimpleHttp::PathSegment{"one"},
+      SimpleHttp::PathSegment{"two"}
+    }};
+
+    CHECK(segments.to_string() == "/one/two");
+  }
+}
+
+TEST_CASE("HttpUrl") {
+  SECTION("path_segments parsed constructor, no segments")
+  {
+    SimpleHttp::HttpUrl url{"https://example.com"};
+    CHECK(url.path_segments().value().empty());
+    CHECK(url.path_segments().to_string().empty());
+  }
+
+  SECTION("path_segments parsed constructor, one segment")
+  {
+    SimpleHttp::HttpUrl url{"https://example.com/one"};
+    // This exposes the lack of complete parsing when constructed with a string value
+    CHECK(url.path_segments().value().empty());
+    CHECK(url.path_segments().to_string().empty());
+  }
+
+  SECTION("path_segments parsed constructor, one segment")
+  {
+    SimpleHttp::HttpUrl url{"https://example.com/one/two"};
+    // This exposes the lack of complete parsing when constructed with a string value
+    CHECK(url.path_segments().value().empty());
+    CHECK(url.path_segments().to_string().empty());
+  }
+
+  SECTION("Fully constructed, multiple segments")
+  {
+    SimpleHttp::HttpUrl url = SimpleHttp::HttpUrl()
+        .with_protocol(SimpleHttp::Protcol{"https"})
+        .with_host(SimpleHttp::Host{"example.com"})
+        .with_path_segments(SimpleHttp::PathSegments{{
+          SimpleHttp::PathSegment{"one"},
+          SimpleHttp::PathSegment{"two"}
+        }});
+
+    CHECK(url.path_segments().to_string() == "/one/two");
+  }
+
+  SECTION("value, when constructed with a string")
+  {
+    CHECK(SimpleHttp::HttpUrl{"http://example.com"}.value() == "http://example.com");
+  }
+}

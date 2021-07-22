@@ -91,7 +91,6 @@ using ErrorCallback = std::function<void(const std::string&)>;
 inline static ErrorCallback NoopErrorCallback = [](auto&){};
 
 using Headers = std::unordered_map<std::string, std::string>;
-using PathSegments = std::vector<PathSegment>;
 using QueryParameters = std::vector<std::pair<QueryParameterKey, QueryParameterValue>>;
 
 inline static const std::string WHITESPACE = "\n\t\f\v\r ";
@@ -154,6 +153,33 @@ struct HttpResponse final {
   HttpResponseBody body;
 };
 
+struct PathSegments final {
+  PathSegments() = default;
+  PathSegments(PathSegments& path_segments) : value_(path_segments.value_) { }
+  PathSegments(PathSegments&& path_segments) : value_(path_segments.value_) { }
+  explicit PathSegments(std::vector<PathSegment> value) : value_(std::move(value)) { }
+  PathSegments& operator=(const PathSegments& other) {
+    this->value_ = other.value_;
+    return *this;
+  }
+
+  const std::vector<PathSegment>& value() const {
+    return value_;
+  }
+
+  std::string to_string() const {
+    std::stringstream ss;
+
+    for (const auto &segment : value_) {
+      ss << "/" << segment;
+    }
+
+    return ss.str();
+  }
+private:
+  std::vector<PathSegment> value_;
+};
+
 struct HttpUrl final {
   HttpUrl() = default;
 
@@ -174,16 +200,13 @@ struct HttpUrl final {
   { }
 
   [[nodiscard]]
-  const Protcol & protocol() {
+  const Protcol & protocol() const {
     return protocol_;
   }
   
   [[nodiscard]]
-  std::string value() {
-    if (value_.empty()) {
-      value_ = to_string();
-    }
-    return value_;
+  std::string value() const {
+    return value_.empty() ? to_string() : value_;
   }
 
   [[nodiscard]]
@@ -210,6 +233,11 @@ struct HttpUrl final {
     return *this;
   }
 
+  [[nodiscard]]
+  const PathSegments& path_segments() const {
+    return path_segments_;
+  }
+
 private:
   Protcol protocol_;
   Host host_;
@@ -227,14 +255,9 @@ private:
   }
   
   [[nodiscard]]
-  std::string to_string() {
+  std::string to_string() const {
     std::stringstream ss;
-    ss << protocol_ << "://" << host_;
-    if (!path_segments_.empty()) {
-      for (const auto& segment : path_segments_) {
-        ss << "/" << segment;
-      }
-    }
+    ss << protocol_ << "://" << host_ << path_segments_.to_string();
 
     if (!query_parameters_.empty()) {
       ss << "?" << query_parameters_[0].first << "=" << query_parameters_[0].second;
@@ -476,7 +499,7 @@ struct Client final {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> execute(HttpUrl url,
+  std::optional<HttpResponse> execute(const HttpUrl& url,
                                       const CurlHeaderCallback &curl_header_callback,
                                       const CurlSetupCallback &curl_setup_callback,
                                       const Predicate<HttpStatusCode> &successPredicate) {
