@@ -287,6 +287,13 @@ Predicate<A> between_inclusive(const A &a, const A &b) {
   };
 }
 
+template<class A>
+Predicate<A> logical_or(const A &a, const A &b) {
+  return [a, b](const A &other) {
+    return other == a || other == b;
+  };
+}
+
 // Information Responses
 inline static HttpStatusCode CONTINUE = HttpStatusCode{100};
 inline static HttpStatusCode SWITCHING_PROTOCOL = HttpStatusCode{101};

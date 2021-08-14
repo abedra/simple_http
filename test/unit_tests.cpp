@@ -22,6 +22,17 @@ TEST_CASE("Predicates")
     CHECK(!subject(11));
   }
 
+  SECTION("logical_or")
+  {
+    SimpleHttp::Predicate<int> subject = SimpleHttp::logical_or(1, 2);
+
+    CHECK(subject(1));
+    CHECK(subject(2));
+    CHECK(!subject(3));
+    CHECK(!subject(-1));
+    CHECK(!subject(-2));
+  }
+
   SECTION("informational")
   {
     SimpleHttp::Predicate<SimpleHttp::HttpStatusCode> informational = SimpleHttp::informational();
