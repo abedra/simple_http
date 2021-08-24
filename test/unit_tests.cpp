@@ -181,3 +181,28 @@ TEST_CASE("HttpUrl") {
     CHECK(SimpleHttp::HttpUrl{"http://example.com"}.value() == "http://example.com");
   }
 }
+
+TEST_CASE("QueryParameters")
+{
+  SECTION("Empty") {
+    SimpleHttp::QueryParameters parameters;
+    CHECK(parameters.to_string().empty());
+  }
+
+  SECTION("Single")
+  {
+    SimpleHttp::QueryParameters parameters{{
+      {SimpleHttp::QueryParameterKey{"first"}, SimpleHttp::QueryParameterValue{"simple"}},
+    }};
+    CHECK(parameters.to_string() == "?first=simple");
+  }
+
+  SECTION("Multiple")
+  {
+    SimpleHttp::QueryParameters parameters{{
+      {SimpleHttp::QueryParameterKey{"first"}, SimpleHttp::QueryParameterValue{"simple"}},
+      {SimpleHttp::QueryParameterKey{"last"}, SimpleHttp::QueryParameterValue{"http"}}
+    }};
+    CHECK(parameters.to_string() == "?first=simple&last=http");
+  }
+}

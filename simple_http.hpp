@@ -91,7 +91,6 @@ using ErrorCallback = std::function<void(const std::string&)>;
 inline static ErrorCallback NoopErrorCallback = [](auto&){};
 
 using Headers = std::unordered_map<std::string, std::string>;
-using QueryParameters = std::vector<std::pair<QueryParameterKey, QueryParameterValue>>;
 
 inline static const std::string WHITESPACE = "\n\t\f\v\r ";
 
@@ -118,6 +117,34 @@ inline static std::vector<std::string> vec(const std::string& candidate, const c
   }
   return container;
 }
+
+struct QueryParameters final {
+  QueryParameters() = default;
+
+  explicit QueryParameters(std::vector<std::pair<QueryParameterKey , QueryParameterValue>> values)
+    : values_(std::move(values))
+  { }
+
+  [[nodiscard]]
+  const std::vector<std::pair<QueryParameterKey , QueryParameterValue>> &values() const {
+    return values_;
+  }
+
+  [[nodiscard]]
+  std::string to_string() const {
+    std::stringstream ss;
+    if (!values_.empty()) {
+      ss << "?" << values_[0].first << "=" << values_[0].second;
+      for (long unsigned int i = 1; i < values_.size(); ++i) {
+        ss << "&" << values_[i].first << "=" << values_[i].second;
+      }
+    }
+    return ss.str();
+  }
+
+private:
+  std::vector<std::pair<QueryParameterKey, QueryParameterValue>> values_;
+};
 
 struct HttpResponseHeaders final {
   explicit HttpResponseHeaders(Headers headers) : headers_(std::move(headers)) {}
@@ -163,10 +190,12 @@ struct PathSegments final {
     return *this;
   }
 
+  [[nodiscard]]
   const std::vector<PathSegment>& value() const {
     return value_;
   }
 
+  [[nodiscard]]
   std::string to_string() const {
     std::stringstream ss;
 
@@ -222,8 +251,8 @@ struct HttpUrl final {
   }
 
   [[nodiscard]]
-  HttpUrl& with_path_segments(PathSegments path_segments) {
-    path_segments_ = std::move(path_segments);
+  HttpUrl& with_path_segments(const PathSegments& path_segments) {
+    path_segments_ = path_segments;
     return *this;
   }
 
@@ -257,15 +286,7 @@ private:
   [[nodiscard]]
   std::string to_string() const {
     std::stringstream ss;
-    ss << protocol_ << "://" << host_ << path_segments_.to_string();
-
-    if (!query_parameters_.empty()) {
-      ss << "?" << query_parameters_[0].first << "=" << query_parameters_[0].second;
-      for (long unsigned int i = 1; i < query_parameters_.size(); ++i) {
-        ss << "&" << query_parameters_[i].first << "=" << query_parameters_[i].second;
-      }
-    }
-
+    ss << protocol_ << "://" << host_ << path_segments_.to_string() << query_parameters_.to_string();
     return trim(ss.str());
   }
 };
@@ -386,7 +407,7 @@ inline static Predicate<HttpStatusCode> server_error() {
 
 template<class A>
 A wrap_response(std::optional<HttpResponse> response,
-               std::function<A(const std::optional<HttpResponse> &response)> wrapperFn) {
+                std::function<A(const std::optional<HttpResponse> &response)> wrapperFn) {
   return wrapperFn(response);
 }
 

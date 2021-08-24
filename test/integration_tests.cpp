@@ -22,8 +22,44 @@ TEST_CASE("Integration Tests")
 
     CHECK(keys["get"] == "ok");
   }
+  
+  SECTION("GET request with single query parameter")
+  {
+    SimpleHttp::HttpUrl &httpUrl = url
+        .with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get_hello"}}})
+        .with_query_parameters(SimpleHttp::QueryParameters{
+          {{SimpleHttp::QueryParameterKey{"name"}, SimpleHttp::QueryParameterValue{"test"}}}
+        });
+    auto maybe_response = client.get(httpUrl);
 
-  SECTION("Post request")
+    REQUIRE(maybe_response);
+
+    SimpleHttp::HttpResponse response = maybe_response.value();
+    auto keys = nlohmann::json::parse(response.body.value());
+
+    CHECK(keys["hello"] == "test");
+  }
+
+  SECTION("GET request with multiple query parameters")
+  {
+    SimpleHttp::HttpUrl &httpUrl = url
+        .with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get_full"}}})
+        .with_query_parameters(SimpleHttp::QueryParameters{{
+          {SimpleHttp::QueryParameterKey{"first"}, SimpleHttp::QueryParameterValue{"simple"}},
+          {SimpleHttp::QueryParameterKey{"last"}, SimpleHttp::QueryParameterValue{"http"}}
+        }});
+    auto maybe_response = client.get(httpUrl);
+
+    REQUIRE(maybe_response);
+
+    SimpleHttp::HttpResponse response = maybe_response.value();
+    auto keys = nlohmann::json::parse(response.body.value());
+
+    CHECK(keys["first"] == "simple");
+    CHECK(keys["last"] == "http");
+  }
+
+  SECTION("POST request")
   {
     auto maybe_response = client.post(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"post"}}}),
                                       SimpleHttp::HttpRequestBody{R"({"name":"test"})"},
@@ -37,7 +73,7 @@ TEST_CASE("Integration Tests")
     CHECK(keys["hello"] == "test");
   }
 
-  SECTION("Put request")
+  SECTION("PUT request")
   {
     auto maybe_response = client.put(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"put"}}}),
                                      SimpleHttp::HttpRequestBody{R"({"update":"test"})"},
@@ -51,7 +87,7 @@ TEST_CASE("Integration Tests")
     CHECK(keys["update"] == "test");
   }
 
-  SECTION("Delete request")
+  SECTION("DELETE request")
   {
     auto maybe_response = client.del(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"delete"}}}));
 
@@ -59,7 +95,7 @@ TEST_CASE("Integration Tests")
     CHECK(maybe_response.value().status == SimpleHttp::OK);
   }
 
-  SECTION("Head request")
+  SECTION("HEAD request")
   {
     auto maybe_response = client.head(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}));
 
@@ -67,7 +103,7 @@ TEST_CASE("Integration Tests")
     CHECK(maybe_response.value().status == SimpleHttp::OK);
   }
 
-  SECTION("Options request")
+  SECTION("OPTIONS request")
   {
     auto maybe_response = client.options(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}));
 
@@ -78,7 +114,7 @@ TEST_CASE("Integration Tests")
                Catch::UnorderedEquals(std::vector<std::string>{"HEAD", "OPTIONS", "GET"}));
   }
 
-  SECTION("Trace request")
+  SECTION("TRACE request")
   {
     auto maybe_response = client.trace(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"trace"}}}));
 
@@ -96,7 +132,7 @@ TEST_CASE("Integration Tests")
     CHECK(error == "Error: Unsupported protocol");
   }
 
-  SECTION("Post request that expects a 204 NO_CONTENT response")
+  SECTION("POST request that expects a 204 NO_CONTENT response")
   {
     auto maybe_response = client.post(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"empty_post_response"}}}),
                                       SimpleHttp::HttpRequestBody{""},
@@ -111,7 +147,7 @@ TEST_CASE("Integration Tests")
     CHECK(response.body.value().empty());
   }
 
-  SECTION("Get request that expects a 405 METHOD_NOT_ALLOWED response")
+  SECTION("GET request that expects a 405 METHOD_NOT_ALLOWED response")
   {
     auto maybe_response = client.get(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"empty_post_response"}}}),
                                      SimpleHttp::eq(SimpleHttp::METHOD_NOT_ALLOWED));

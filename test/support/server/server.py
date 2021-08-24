@@ -9,6 +9,17 @@ app = Flask(__name__)
 def get():
     return json.dumps({'get': 'ok'})
 
+@app.route('/get_hello')
+def get_hello():
+    return json.dumps({'hello': request.args.get('name')})
+
+@app.route('/get_full')
+def get_full():
+    return json.dumps({
+        'first': request.args.get('first'),
+        'last': request.args.get('last')
+    })
+
 @app.route('/post', methods = ['POST'])
 def post():
     data = request.get_json(silent=True)
