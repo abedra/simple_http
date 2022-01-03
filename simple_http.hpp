@@ -531,52 +531,21 @@ struct Client final {
                                       const CurlHeaderCallback &curl_header_callback,
                                       const CurlSetupCallback &curl_setup_callback,
                                       const Predicate<HttpStatusCode> &successPredicate) {
-      std::string body_buffer;
-      std::string header_buffer;
-      long rawStatusCode = 0;
+      CurlWrapper curlWrapper{successPredicate, error_callback_};
 
-      CURL *curl = curl_easy_init();
-      if (curl) {
-          struct curl_slist *chunk = nullptr;
+      curlWrapper.execute_header_callback(curl_header_callback);
+      curlWrapper.add_option(CURLOPT_URL, url.value().c_str());
+      curlWrapper.add_option(CURLOPT_VERBOSE, debug_);
 
-          curl_easy_setopt(curl, CURLOPT_URL, url.value().c_str());
-          curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-          curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body_buffer);          
-          curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_header_callback(chunk));
-          curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_callback);
-          curl_easy_setopt(curl, CURLOPT_HEADERDATA, &header_buffer);
-          curl_easy_setopt(curl, CURLOPT_VERBOSE, debug_);
-          curl_setup_callback(curl);
-
-          if (url.protocol().value() == "https") {
-            verify_
-                ? curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L)
-                : curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-          }
-
-          CURLcode res = curl_easy_perform(curl);
-          if (res != CURLE_OK) {
-            error_callback_(curl_easy_strerror(res));
-            curl_easy_cleanup(curl);
-            curl_slist_free_all(chunk);
-            return std::nullopt;
-          }
-
-          curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &rawStatusCode);
-          curl_easy_cleanup(curl);
-          curl_slist_free_all(chunk);
+      if (url.protocol().value() == "https") {
+          verify_
+            ? curlWrapper.add_option(CURLOPT_SSL_VERIFYPEER, 1L)
+            : curlWrapper.add_option(CURLOPT_SSL_VERIFYPEER, 0L);
       }
 
-      HttpStatusCode status{rawStatusCode};
-      if (successPredicate(status)) {
-        return std::optional<HttpResponse>({
-            status, 
-            HttpResponseHeaders{header_buffer}, 
-            HttpResponseBody{body_buffer}
-          });
-      } else {
-        return std::nullopt;
-      }
+      curlWrapper.execute_setup_callback(curl_setup_callback);
+
+      return curlWrapper.execute();
   }
 
 private:
@@ -600,5 +569,69 @@ private:
           return chunk;
       };
   }
+
+  struct CurlWrapper final {
+      CurlWrapper(const Predicate<HttpStatusCode> &success_predicate, ErrorCallback error_callback)
+        : curl_(curl_easy_init())
+        , slist_(nullptr)
+        , success_predicate_(success_predicate)
+        , error_callback_(std::move(error_callback))
+      { }
+
+      ~CurlWrapper() {
+          curl_easy_cleanup(curl_);
+          curl_slist_free_all(slist_);
+      }
+
+      template<class A>
+      void add_option(const CURLoption option, A value) {
+          curl_easy_setopt(curl_, option, value);
+      }
+
+      void execute_header_callback(const CurlHeaderCallback &header_callback) {
+          slist_ = header_callback(slist_);
+      }
+
+      void execute_setup_callback(const CurlSetupCallback &setup_callback) {
+          setup_callback(curl_);
+      }
+
+      [[nodiscard]]
+      std::optional<HttpResponse> execute() {
+          std::string body_buffer;
+          std::string header_buffer;
+
+          curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, write_callback);
+          curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &body_buffer);
+          curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, slist_);
+          curl_easy_setopt(curl_, CURLOPT_HEADERDATA, &header_buffer);
+
+          CURLcode res = curl_easy_perform(curl_);
+          if (res != CURLE_OK) {
+              error_callback_(curl_easy_strerror(res));
+              return std::nullopt;
+          }
+
+          long status_code = 0;
+          curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &status_code);
+
+          HttpStatusCode status{status_code};
+          if (success_predicate_(status)) {
+              return std::optional<HttpResponse>({
+                  status,
+                  HttpResponseHeaders{header_buffer},
+                  HttpResponseBody{body_buffer}
+              });
+          } else {
+              return std::nullopt;
+          }
+      }
+
+  private:
+      CURL *curl_;
+      curl_slist *slist_;
+      Predicate<HttpStatusCode> success_predicate_;
+      ErrorCallback error_callback_;
+  };
 };
 }  // namespace SimpleHttp
