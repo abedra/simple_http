@@ -7,8 +7,12 @@
 #include <functional>
 #include <algorithm>
 #include <utility>
+#include <variant>
 
 namespace SimpleHttp {
+
+template<class... As> struct visitor : As... { using As::operator()...; };
+template<class... As> visitor(As...) -> visitor<As...>;
 
 template<typename Name, typename A>
 struct Tiny {
@@ -150,7 +154,15 @@ struct HttpResponseHeaders final {
   explicit HttpResponseHeaders(Headers headers) : headers_(std::move(headers)) {}
   explicit HttpResponseHeaders(const std::string &header_string) : headers_(parse(header_string)) {}
 
-  const Headers& value() const {
+    bool operator==(const HttpResponseHeaders &rhs) const {
+        return headers_ == rhs.headers_;
+    }
+
+    bool operator!=(const HttpResponseHeaders &rhs) const {
+        return !(rhs == *this);
+    }
+
+    const Headers& value() const {
     return headers_;
   }
 
@@ -178,12 +190,91 @@ struct HttpResponse final {
   HttpStatusCode status;
   HttpResponseHeaders headers;
   HttpResponseBody body;
+
+    bool operator==(const HttpResponse &rhs) const {
+        return status == rhs.status &&
+               headers == rhs.headers &&
+               body == rhs.body;
+    }
+
+    bool operator!=(const HttpResponse &rhs) const {
+        return !(rhs == *this);
+    }
+};
+
+struct HttpSuccess final {
+    explicit HttpSuccess(HttpResponse response) : value_(std::move(response)) { }
+
+    bool operator==(const HttpSuccess &rhs) const {
+        return value_ == rhs.value_;
+    }
+
+    bool operator!=(const HttpSuccess &rhs) const {
+        return !(rhs == *this);
+    }
+
+    [[nodiscard]]
+    const HttpResponse &value() const {
+        return value_;
+    }
+
+private:
+    HttpResponse value_;
+};
+
+struct HttpFailure final {
+    explicit HttpFailure(HttpResponse value) : value_(std::move(value)) { }
+
+    bool operator==(const HttpFailure &rhs) const {
+        return value_ == rhs.value_;
+    }
+
+    bool operator!=(const HttpFailure &rhs) const {
+        return !(rhs == *this);
+    }
+
+    [[nodiscard]]
+    const HttpResponse &value() const {
+        return value_;
+    }
+
+private:
+    HttpResponse value_;
+};
+
+struct HttpResult final {
+    explicit HttpResult(std::variant<HttpFailure, HttpSuccess> value) : value_(std::move(value)) { }
+
+    bool operator==(const HttpResult &rhs) const {
+        return value_ == rhs.value_;
+    }
+
+    bool operator!=(const HttpResult &rhs) const {
+        return !(rhs == *this);
+    }
+
+    [[nodiscard]]
+    const std::variant<HttpFailure, HttpSuccess> &value() const {
+        return value_;
+    }
+
+    template<class A>
+    [[nodiscard]]
+    A match(const std::function<A(const HttpFailure&)> failureFn, const std::function<A(const HttpSuccess&)> successFn) {
+        std::visit(visitor{
+            [&failureFn](const HttpFailure &failure){ return failureFn(failure); },
+            [&successFn](const HttpSuccess &success){ return successFn(success); }
+        }, value_);
+    }
+
+private:
+    std::variant<HttpFailure, HttpSuccess> value_;
 };
 
 struct PathSegments final {
   PathSegments() = default;
   PathSegments(PathSegments& path_segments) : value_(path_segments.value_) { }
-  PathSegments(PathSegments&& path_segments) : value_(path_segments.value_) { }
+  PathSegments(PathSegments&& path_segments)  noexcept : value_(std::move(path_segments.value_)) { }
   explicit PathSegments(std::vector<PathSegment> value) : value_(std::move(value)) { }
   PathSegments& operator=(const PathSegments& other) {
     this->value_ = other.value_;
