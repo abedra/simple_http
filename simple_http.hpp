@@ -7,8 +7,13 @@
 #include <functional>
 #include <algorithm>
 #include <utility>
+#include <variant>
+#include <ostream>
 
 namespace SimpleHttp {
+
+template<class... As> struct visitor : As... { using As::operator()...; };
+template<class... As> visitor(As...) -> visitor<As...>;
 
 template<typename Name, typename A>
 struct Tiny {
@@ -150,6 +155,26 @@ struct HttpResponseHeaders final {
   explicit HttpResponseHeaders(Headers headers) : headers_(std::move(headers)) {}
   explicit HttpResponseHeaders(const std::string &header_string) : headers_(parse(header_string)) {}
 
+    bool operator==(const HttpResponseHeaders &rhs) const {
+        return headers_ == rhs.headers_;
+    }
+
+    bool operator!=(const HttpResponseHeaders &rhs) const {
+        return !(rhs == *this);
+    }
+
+  friend std::ostream &operator<<(std::ostream &os, const HttpResponseHeaders &headers) {
+    const std::basic_string<char> &string = std::accumulate(
+        headers.value().cbegin(),
+        headers.value().cend(),
+        std::string(),
+        [](const std::string &s, const std::pair<const std::string, std::string> &v) {
+          return s + (s.empty() ? std::string() : ",") + v.first + " : " + v.second;
+        });
+    os << "headers_: [" << string << "]";
+    return os;
+  }
+
   const Headers& value() const {
     return headers_;
   }
@@ -178,12 +203,138 @@ struct HttpResponse final {
   HttpStatusCode status;
   HttpResponseHeaders headers;
   HttpResponseBody body;
+
+    bool operator==(const HttpResponse &rhs) const {
+        return status == rhs.status &&
+               headers == rhs.headers &&
+               body == rhs.body;
+    }
+
+    bool operator!=(const HttpResponse &rhs) const {
+        return !(rhs == *this);
+    }
+
+  friend std::ostream &operator<<(std::ostream &os, const HttpResponse &response) {
+    os << "status: " << response.status << " headers: " << response.headers << " body: " << response.body;
+    return os;
+  }
+};
+
+struct HttpSuccess final {
+  explicit HttpSuccess(HttpResponse response) : value_(std::move(response)) { }
+
+  bool operator==(const HttpSuccess &rhs) const {
+    return value_ == rhs.value_;
+  }
+
+  bool operator!=(const HttpSuccess &rhs) const {
+    return !(rhs == *this);
+  }
+
+  friend std::ostream &operator<<(std::ostream &os, const HttpSuccess &success) {
+    os << success.value_;
+    return os;
+  }
+
+  [[nodiscard]]
+  const HttpResponse &value() const {
+    return value_;
+  }
+
+  [[nodiscard]]
+  const HttpStatusCode &status() const {
+    return value_.status;
+  }
+
+  [[nodiscard]]
+  const HttpResponseBody &body() const {
+    return value_.body;
+  }
+
+  [[nodiscard]]
+  const HttpResponseHeaders &headers() const {
+    return value_.headers;
+  }
+
+private:
+  HttpResponse value_;
+};
+
+struct HttpFailure final {
+    explicit HttpFailure(HttpResponse value) : value_(std::move(value)) { }
+
+    bool operator==(const HttpFailure &rhs) const {
+        return value_ == rhs.value_;
+    }
+
+    bool operator!=(const HttpFailure &rhs) const {
+        return !(rhs == *this);
+    }
+
+  friend std::ostream &operator<<(std::ostream &os, const HttpFailure &failure) {
+    os << failure.value_;
+    return os;
+  }
+
+  [[nodiscard]]
+  const HttpResponse &value() const {
+    return value_;
+  }
+
+  [[nodiscard]]
+  const HttpStatusCode &status() const {
+    return value_.status;
+  }
+
+  [[nodiscard]]
+  const HttpResponseBody &body() const {
+    return value_.body;
+  }
+
+  static HttpFailure empty() {
+    return HttpFailure{HttpResponse{
+      HttpStatusCode{0},
+      HttpResponseHeaders{Headers{}},
+      HttpResponseBody{}}
+    };
+  }
+private:
+    HttpResponse value_;
+};
+
+struct HttpResult final {
+    explicit HttpResult(std::variant<HttpFailure, HttpSuccess> value) : value_(std::move(value)) { }
+
+    bool operator==(const HttpResult &rhs) const {
+        return value_ == rhs.value_;
+    }
+
+    bool operator!=(const HttpResult &rhs) const {
+        return !(rhs == *this);
+    }
+
+    [[nodiscard]]
+    const std::variant<HttpFailure, HttpSuccess> &value() const {
+        return value_;
+    }
+
+    template<class A>
+    [[nodiscard]]
+    A match(const std::function<A(const HttpFailure&)> failureFn, const std::function<A(const HttpSuccess&)> successFn) {
+        return std::visit(visitor{
+            [&failureFn](const HttpFailure &failure){ return failureFn(failure); },
+            [&successFn](const HttpSuccess &success){ return successFn(success); }
+        }, value_);
+    }
+
+private:
+    std::variant<HttpFailure, HttpSuccess> value_;
 };
 
 struct PathSegments final {
   PathSegments() = default;
   PathSegments(PathSegments& path_segments) : value_(path_segments.value_) { }
-  PathSegments(PathSegments&& path_segments) : value_(path_segments.value_) { }
+  PathSegments(PathSegments&& path_segments)  noexcept : value_(std::move(path_segments.value_)) { }
   explicit PathSegments(std::vector<PathSegment> value) : value_(std::move(value)) { }
   PathSegments& operator=(const PathSegments& other) {
     this->value_ = other.value_;
@@ -315,6 +466,9 @@ Predicate<A> logical_or(const A &a, const A &b) {
   };
 }
 
+// Unknown
+inline static HttpStatusCode UNKNOWN = HttpStatusCode{0};
+
 // Information Responses
 inline static HttpStatusCode CONTINUE = HttpStatusCode{100};
 inline static HttpStatusCode SWITCHING_PROTOCOL = HttpStatusCode{101};
@@ -405,12 +559,6 @@ inline static Predicate<HttpStatusCode> server_error() {
   return between_inclusive(INTERNAL_SERVER_ERROR, NETWORK_AUTHENTICATION_REQUIRED);
 }
 
-template<class A>
-A wrap_response(std::optional<HttpResponse> response,
-                std::function<A(const std::optional<HttpResponse> &response)> wrapperFn) {
-  return wrapperFn(response);
-}
-
 struct Client final {
   Client() : error_callback_(NoopErrorCallback), debug_(false), verify_(true) {}
   explicit Client(ErrorCallback error_callback) : error_callback_(std::move(error_callback)), debug_(false), verify_(true) {}
@@ -431,30 +579,30 @@ struct Client final {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> get(const HttpUrl &url,
-                                  const Headers &headers = {}) {
+  HttpResult get(const HttpUrl &url,
+                 const Headers &headers = {}) {
     return get(url, eq(OK), headers);
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> get(const HttpUrl &url,
-                                  const Predicate<HttpStatusCode> &successPredicate,
-                                  const Headers &headers = {}) {
+  HttpResult get(const HttpUrl &url,
+                 const Predicate<HttpStatusCode> &successPredicate,
+                 const Headers &headers = {}) {
     return execute(url, make_header_callback(headers), NoopCurlSetupCallback, successPredicate);
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> post(const HttpUrl &url,
-                                   const HttpRequestBody &body,
-                                   const Headers &headers = {}) {
+  HttpResult post(const HttpUrl &url,
+                  const HttpRequestBody &body,
+                  const Headers &headers = {}) {
     return post(url, body, eq(OK), headers);
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> post(const HttpUrl &url,
-                                   const HttpRequestBody &body,
-                                   const Predicate<HttpStatusCode> &successPredicate,
-                                   const Headers &headers = {}) {
+  HttpResult post(const HttpUrl &url,
+                  const HttpRequestBody &body,
+                  const Predicate<HttpStatusCode> &successPredicate,
+                  const Headers &headers = {}) {
     CurlSetupCallback setup = [&](CURL *curl) {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.value().c_str());
     };
@@ -463,17 +611,17 @@ struct Client final {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> put(const HttpUrl &url,
-                                  const HttpRequestBody &body,
-                                  const Headers &headers = {}) {
+  HttpResult put(const HttpUrl &url,
+                 const HttpRequestBody &body,
+                 const Headers &headers = {}) {
     return put(url, body, eq(OK), headers);
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> put(const HttpUrl &url,
-                                  const HttpRequestBody &body,
-                                  const Predicate<HttpStatusCode> &successPredicate,
-                                  const Headers &headers = {}) {
+  HttpResult put(const HttpUrl &url,
+                 const HttpRequestBody &body,
+                 const Predicate<HttpStatusCode> &successPredicate,
+                 const Headers &headers = {}) {
       CurlSetupCallback setup = [&](CURL *curl) {
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.value().c_str());
@@ -483,15 +631,15 @@ struct Client final {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> del(const HttpUrl &url,
-                                  const Headers &headers = {}) {
+  HttpResult del(const HttpUrl &url,
+                 const Headers &headers = {}) {
     return del(url, eq(OK), headers);
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> del(const HttpUrl &url,
-                                  const Predicate<HttpStatusCode> &successPredicate,
-                                  const Headers &headers = {}) {
+  HttpResult del(const HttpUrl &url,
+                 const Predicate<HttpStatusCode> &successPredicate,
+                 const Headers &headers = {}) {
     CurlSetupCallback setup = [&](CURL *curl) {
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
     };
@@ -500,7 +648,7 @@ struct Client final {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> head(const HttpUrl &url) {
+  HttpResult head(const HttpUrl &url) {
     CurlSetupCallback setup = [&](CURL *curl) {
       curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
     };
@@ -509,7 +657,7 @@ struct Client final {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> options(const HttpUrl &url) {
+  HttpResult options(const HttpUrl &url) {
     CurlSetupCallback setup = [&](CURL *curl) {
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "OPTIONS");
     };
@@ -518,7 +666,7 @@ struct Client final {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> trace(const HttpUrl &url) {
+  HttpResult trace(const HttpUrl &url) {
     CurlSetupCallback setup = [&](CURL *curl) {
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "TRACE");
     };
@@ -527,10 +675,10 @@ struct Client final {
   }
 
   [[nodiscard]]
-  std::optional<HttpResponse> execute(const HttpUrl& url,
-                                      const CurlHeaderCallback &curl_header_callback,
-                                      const CurlSetupCallback &curl_setup_callback,
-                                      const Predicate<HttpStatusCode> &successPredicate) {
+  HttpResult execute(const HttpUrl& url,
+                     const CurlHeaderCallback &curl_header_callback,
+                     const CurlSetupCallback &curl_setup_callback,
+                     const Predicate<HttpStatusCode> &successPredicate) {
       CurlWrapper curlWrapper{successPredicate, error_callback_};
 
       curlWrapper.execute_header_callback(curl_header_callback);
@@ -597,7 +745,7 @@ private:
       }
 
       [[nodiscard]]
-      std::optional<HttpResponse> execute() {
+      HttpResult execute() {
           std::string body_buffer;
           std::string header_buffer;
 
@@ -609,22 +757,21 @@ private:
           CURLcode res = curl_easy_perform(curl_);
           if (res != CURLE_OK) {
               error_callback_(curl_easy_strerror(res));
-              return std::nullopt;
+              return HttpResult{HttpFailure::empty()};
           }
 
           long status_code = 0;
           curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &status_code);
 
           HttpStatusCode status{status_code};
-          if (success_predicate_(status)) {
-              return std::optional<HttpResponse>({
+          HttpResponse httpResponse = HttpResponse{
                   status,
                   HttpResponseHeaders{header_buffer},
-                  HttpResponseBody{body_buffer}
-              });
-          } else {
-              return std::nullopt;
-          }
+                  HttpResponseBody{body_buffer}};
+
+          return success_predicate_(status)
+            ? HttpResult{HttpSuccess{httpResponse}}
+            : HttpResult{HttpFailure{httpResponse}};
       }
 
   private:

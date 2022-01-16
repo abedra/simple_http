@@ -13,14 +13,24 @@ TEST_CASE("Integration Tests")
 
   SECTION("GET Request")
   {
-    auto maybe_response = client.get(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}));
+    SimpleHttp::HttpUrl httpUrl = url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}});
 
-    REQUIRE(maybe_response);
+    SimpleHttp::HttpSuccess expected{
+      SimpleHttp::HttpResponse{
+          SimpleHttp::OK,
+          SimpleHttp::HttpResponseHeaders{SimpleHttp::Headers{}},
+          SimpleHttp::HttpResponseBody{R"({"get": "ok"})"}
+      }
+    };
 
-    SimpleHttp::HttpResponse response = maybe_response.value();
-    auto keys = nlohmann::json::parse(response.body.value());
-
-    CHECK(keys["get"] == "ok");
+    client.get(httpUrl).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [&expected](const SimpleHttp::HttpSuccess &success){
+          CHECK(success.body() == expected.body());
+        }
+    );
   }
   
   SECTION("GET request with single query parameter")
@@ -30,157 +40,231 @@ TEST_CASE("Integration Tests")
         .with_query_parameters(SimpleHttp::QueryParameters{
           {{SimpleHttp::QueryParameterKey{"name"}, SimpleHttp::QueryParameterValue{"test"}}}
         });
-    auto maybe_response = client.get(httpUrl);
 
-    REQUIRE(maybe_response);
+    SimpleHttp::HttpSuccess expected{
+        SimpleHttp::HttpResponse{
+            SimpleHttp::OK,
+            SimpleHttp::HttpResponseHeaders{SimpleHttp::Headers{}},
+            SimpleHttp::HttpResponseBody{R"({"hello": "test"})"}
+        }
+    };
 
-    SimpleHttp::HttpResponse response = maybe_response.value();
-    auto keys = nlohmann::json::parse(response.body.value());
-
-    CHECK(keys["hello"] == "test");
+    client.get(httpUrl).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [&expected](const SimpleHttp::HttpSuccess &success){
+          CHECK(success.body() == expected.body());
+        }
+    );
   }
 
   SECTION("GET request with multiple query parameters")
   {
-    SimpleHttp::HttpUrl &httpUrl = url
+    SimpleHttp::HttpUrl httpUrl = url
         .with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get_full"}}})
         .with_query_parameters(SimpleHttp::QueryParameters{{
           {SimpleHttp::QueryParameterKey{"first"}, SimpleHttp::QueryParameterValue{"simple"}},
           {SimpleHttp::QueryParameterKey{"last"}, SimpleHttp::QueryParameterValue{"http"}}
         }});
-    auto maybe_response = client.get(httpUrl);
 
-    REQUIRE(maybe_response);
+    SimpleHttp::HttpSuccess expected{
+        SimpleHttp::HttpResponse{
+            SimpleHttp::OK,
+            SimpleHttp::HttpResponseHeaders{SimpleHttp::Headers{}},
+            SimpleHttp::HttpResponseBody{R"({"first": "simple", "last": "http"})"}
+        }
+    };
 
-    SimpleHttp::HttpResponse response = maybe_response.value();
-    auto keys = nlohmann::json::parse(response.body.value());
-
-    CHECK(keys["first"] == "simple");
-    CHECK(keys["last"] == "http");
+    client.get(httpUrl).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [&expected](const SimpleHttp::HttpSuccess &success){
+          CHECK(success.body() == expected.body());
+        }
+    );
   }
 
   SECTION("POST request")
   {
-    auto maybe_response = client.post(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"post"}}}),
-                                      SimpleHttp::HttpRequestBody{R"({"name":"test"})"},
-                                      {{"Content-Type", "application/json"}});
+    SimpleHttp::HttpUrl httpUrl = url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"post"}}});
+    SimpleHttp::HttpRequestBody body = SimpleHttp::HttpRequestBody{R"({"name":"test"})"};
+    SimpleHttp::Headers headers{{{"Content-Type", "application/json"}}};
 
-    REQUIRE(maybe_response);
+    SimpleHttp::HttpSuccess expected{
+        SimpleHttp::HttpResponse{
+            SimpleHttp::OK,
+            SimpleHttp::HttpResponseHeaders{SimpleHttp::Headers{}},
+            SimpleHttp::HttpResponseBody{R"({"hello": "test"})"}
+        }
+    };
 
-    SimpleHttp::HttpResponse response = maybe_response.value();
-    auto keys = nlohmann::json::parse(response.body.value());
-
-    CHECK(keys["hello"] == "test");
+    client.post(httpUrl, body, headers).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [&expected](const SimpleHttp::HttpSuccess &success){
+          CHECK(success.body() == expected.body());
+        }
+    );
   }
 
   SECTION("PUT request")
   {
-    auto maybe_response = client.put(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"put"}}}),
-                                     SimpleHttp::HttpRequestBody{R"({"update":"test"})"},
-                                     {{"Content-Type", "application/json"}});
+    SimpleHttp::HttpUrl httpUrl = url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"put"}}});
+    SimpleHttp::HttpRequestBody body = SimpleHttp::HttpRequestBody{R"({"update":"test"})"};
+    SimpleHttp::Headers headers{{{"Content-Type", "application/json"}}};
 
-    REQUIRE(maybe_response);
+    SimpleHttp::HttpSuccess expected{
+        SimpleHttp::HttpResponse{
+            SimpleHttp::OK,
+            SimpleHttp::HttpResponseHeaders{SimpleHttp::Headers{}},
+            SimpleHttp::HttpResponseBody{R"({"update": "test"})"}
+        }
+    };
 
-    SimpleHttp::HttpResponse response = maybe_response.value();
-    auto keys = nlohmann::json::parse(response.body.value());
-
-    CHECK(keys["update"] == "test");
+    client.put(httpUrl, body, headers).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [&expected](const SimpleHttp::HttpSuccess &success){
+          CHECK(success.body() == expected.body());
+        }
+    );
   }
 
   SECTION("DELETE request")
   {
-    auto maybe_response = client.del(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"delete"}}}));
-
-    REQUIRE(maybe_response);
-    CHECK(maybe_response.value().status == SimpleHttp::OK);
+    SimpleHttp::HttpUrl httpUrl = url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"delete"}}});
+    client.del(httpUrl).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [](const SimpleHttp::HttpSuccess &success){
+          CHECK(success.status() == SimpleHttp::OK);
+        }
+    );
   }
 
   SECTION("HEAD request")
   {
-    auto maybe_response = client.head(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}));
-
-    REQUIRE(maybe_response);
-    CHECK(maybe_response.value().status == SimpleHttp::OK);
+    SimpleHttp::HttpUrl httpUrl = url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}});
+    client.head(httpUrl).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [](const SimpleHttp::HttpSuccess &success){
+          CHECK(success.status() == SimpleHttp::OK);
+        }
+    );
   }
 
   SECTION("OPTIONS request")
   {
-    auto maybe_response = client.options(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}));
-
-    REQUIRE(maybe_response);
-
-    SimpleHttp::Headers headers = maybe_response.value().headers.value();
-    CHECK_THAT(SimpleHttp::vec(headers.at("Allow"), ','),
-               Catch::UnorderedEquals(std::vector<std::string>{"HEAD", "OPTIONS", "GET"}));
+    SimpleHttp::HttpUrl httpUrl = url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}});
+    client.options(httpUrl).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [](const SimpleHttp::HttpSuccess &success){
+          CHECK_THAT(SimpleHttp::vec(success.headers().value().at("Allow"), ','),
+                     Catch::UnorderedEquals(std::vector<std::string>{"HEAD", "OPTIONS", "GET"}));
+        }
+    );
   }
 
   SECTION("TRACE request")
   {
-    auto maybe_response = client.trace(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"trace"}}}));
-
-    REQUIRE(maybe_response);
-    CHECK(maybe_response.value().headers.value().at("Content-Type") == "message/http");
+    SimpleHttp::HttpUrl httpUrl = url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"trace"}}});
+    client.trace(httpUrl).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [](const SimpleHttp::HttpSuccess &success){
+          CHECK(success.headers().value().at("Content-Type") == "message/http");
+        }
+    );
   }
 
   SECTION("Connection error")
   {
     std::string error;
     client = client.with_error_callback([&error](auto &err) { error = "Error: " + err; });
-    auto maybe_response = client.get(url.with_protocol(SimpleHttp::Protcol{"zxcv"}));
-
-    REQUIRE(!maybe_response);
-    CHECK(error == "Error: Unsupported protocol");
+    SimpleHttp::HttpUrl httpUrl = url.with_protocol(SimpleHttp::Protcol{"zxcv"});
+    client.get(httpUrl).template match<void>(
+        [&error](const SimpleHttp::HttpFailure &failure){
+          CHECK(error == "Error: Unsupported protocol");
+        },
+        [](const SimpleHttp::HttpSuccess &success){
+          FAIL(success.status().to_string() + " : " + success.body().value());
+        }
+    );
   }
 
   SECTION("POST request that expects a 204 NO_CONTENT response")
   {
-    auto maybe_response = client.post(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"empty_post_response"}}}),
-                                      SimpleHttp::HttpRequestBody{""},
-                                      SimpleHttp::eq(SimpleHttp::NO_CONTENT),
-                                      {{"Content-Type", "application/json"}});
+    SimpleHttp::HttpUrl httpUrl = url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"empty_post_response"}}});
+    SimpleHttp::HttpRequestBody body = SimpleHttp::HttpRequestBody{""};
+    SimpleHttp::Predicate<SimpleHttp::HttpStatusCode> successPredicate = SimpleHttp::eq(SimpleHttp::NO_CONTENT);
+    SimpleHttp::Headers headers{{{"Content-Type", "application/json"}}};
 
-    REQUIRE(maybe_response);
-
-    SimpleHttp::HttpResponse response = maybe_response.value();
-
-    CHECK(response.status == SimpleHttp::NO_CONTENT);
-    CHECK(response.body.value().empty());
+    client.post(httpUrl, body, successPredicate, headers).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [](const SimpleHttp::HttpSuccess &success){
+          CHECK(success.status() == SimpleHttp::NO_CONTENT);
+          CHECK(success.body().value().empty());
+        }
+    );
   }
 
   SECTION("GET request that expects a 405 METHOD_NOT_ALLOWED response")
   {
-    auto maybe_response = client.get(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"empty_post_response"}}}),
-                                     SimpleHttp::eq(SimpleHttp::METHOD_NOT_ALLOWED));
+    SimpleHttp::HttpUrl httpUrl = url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"empty_post_response"}}});
+    SimpleHttp::Predicate<SimpleHttp::HttpStatusCode> successPredicate = SimpleHttp::eq(SimpleHttp::METHOD_NOT_ALLOWED);
 
-    REQUIRE(maybe_response);
-    CHECK(maybe_response.value().status == SimpleHttp::METHOD_NOT_ALLOWED);
+    client.get(httpUrl, successPredicate).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [](const SimpleHttp::HttpSuccess &success){
+          CHECK(success.status() == SimpleHttp::METHOD_NOT_ALLOWED);
+        }
+    );
   }
 
   SECTION("Ranged response success predicate")
   {
-    auto maybe_response = client.get(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}),
-                                     SimpleHttp::successful());
+    SimpleHttp::HttpUrl httpUrl = url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}});
+    SimpleHttp::Predicate<SimpleHttp::HttpStatusCode> successPredicate = SimpleHttp::successful();
+    SimpleHttp::HttpResponseBody expected{ SimpleHttp::HttpResponseBody{R"({"get": "ok"})"} };
 
-    REQUIRE(maybe_response);
-    SimpleHttp::HttpResponse response = maybe_response.value();
-    auto keys = nlohmann::json::parse(response.body.value());
-
-    CHECK(keys["get"] == "ok");
+    client.get(httpUrl, successPredicate).template match<void>(
+        [](const SimpleHttp::HttpFailure &failure){
+          FAIL(failure.status().to_string() + " : " + failure.body().value());
+        },
+        [&expected](const SimpleHttp::HttpSuccess &success){
+          CHECK(success.body() == expected);
+        }
+    );
   }
 
   SECTION("Wrap Response")
   {
-    auto maybe_response = client.get(url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}}),
-                                     SimpleHttp::successful());
+    SimpleHttp::HttpUrl httpUrl = url.with_path_segments(SimpleHttp::PathSegments{{SimpleHttp::PathSegment{"get"}}});
+    SimpleHttp::Predicate<SimpleHttp::HttpStatusCode> successPredicate = SimpleHttp::successful();
 
-    REQUIRE(maybe_response);
-
-    std::function<std::string(const std::optional<SimpleHttp::HttpResponse> &response)> capture_get = [&maybe_response](const auto &response) {
-      auto keys = nlohmann::json::parse(maybe_response.value().body.value());
-      return keys["get"];
-    };
-
-    auto wrapped = SimpleHttp::wrap_response<std::string>(maybe_response, capture_get);
+    auto wrapped = client.get(httpUrl, successPredicate).template match<std::string>(
+        [](const SimpleHttp::HttpFailure &failure) {
+          return failure.body().value();
+        },
+        [](const SimpleHttp::HttpSuccess &success) {
+          auto keys = nlohmann::json::parse(success.body().value());
+          return keys["get"];
+        }
+    );
 
     CHECK(wrapped == "ok");
   }
