@@ -4,7 +4,7 @@ Simple Http is a header only C++ wrapper for libcurl. The aim is to have a small
 
 ## Quick Start
 
-The following example demonstrates an `HTTP GET` request with JSON parsing provided by `nlohmann::json`. All calls will return `std::optional<SimpleHttp::HttpResponse>`
+The following example demonstrates an `HTTP GET` request with JSON parsing provided by `nlohmann::json`. All calls will return an `HttpResult`, which holds an underlying type of `std::variant<SimpleHttp::HttpFailure, SimpleHttp::HttpSuccess>`. An exhaustive handling of this result type can be performed by calling the `match` method and providing functions to handle success and failure. The `match` function expects unification of the witness type.
 
 ```c++
 #include <iostream>
