@@ -206,3 +206,40 @@ TEST_CASE("QueryParameters")
     CHECK(parameters.to_string() == "?first=simple&last=http");
   }
 }
+
+TEST_CASE("HttpResult")
+{
+  SimpleHttp::HttpSuccess success = SimpleHttp::HttpSuccess{SimpleHttp::HttpResponse{
+      SimpleHttp::OK,
+      SimpleHttp::HttpResponseHeaders{SimpleHttp::Headers{}},
+      SimpleHttp::HttpResponseBody{}}};
+  SimpleHttp::HttpFailure failure = SimpleHttp::HttpFailure::empty();
+
+  SECTION("Failure")
+  {
+    SimpleHttp::HttpResult result{failure};
+    CHECK(result.failure() == std::optional<SimpleHttp::HttpFailure>{failure});
+    result.template match<void>(
+        [&failure](const SimpleHttp::HttpFailure &f){
+          CHECK(f == failure);
+        },
+        [](const SimpleHttp::HttpSuccess &s){
+          FAIL("Got Successful Response: " << s.value());
+        }
+    );
+  }
+
+  SECTION("Success")
+  {
+    SimpleHttp::HttpResult result{success};
+    CHECK(result.success() == std::optional<SimpleHttp::HttpSuccess>{success});
+    result.template match<void>(
+        [](const SimpleHttp::HttpFailure &f){
+          FAIL("Got Failure Response: " << f.value());
+        },
+        [&success](const SimpleHttp::HttpSuccess &s){
+          CHECK(s == success);
+        }
+    );
+  }
+}

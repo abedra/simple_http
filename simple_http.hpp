@@ -171,7 +171,7 @@ struct HttpResponseHeaders final {
         [](const std::string &s, const std::pair<const std::string, std::string> &v) {
           return s + (s.empty() ? std::string() : ",") + v.first + " : " + v.second;
         });
-    os << "headers_: [" << string << "]";
+    os << "[" << string << "]";
     return os;
   }
 
@@ -303,22 +303,36 @@ private:
 };
 
 struct HttpResult final {
-    explicit HttpResult(std::variant<HttpFailure, HttpSuccess> value) : value_(std::move(value)) { }
+  explicit HttpResult(std::variant<HttpFailure, HttpSuccess> value) : value_(std::move(value)) { }
 
-    bool operator==(const HttpResult &rhs) const {
-        return value_ == rhs.value_;
-    }
+  bool operator==(const HttpResult &rhs) const {
+    return value_ == rhs.value_;
+  }
 
-    bool operator!=(const HttpResult &rhs) const {
-        return !(rhs == *this);
-    }
+  bool operator!=(const HttpResult &rhs) const {
+    return !(rhs == *this);
+  }
 
-    [[nodiscard]]
-    const std::variant<HttpFailure, HttpSuccess> &value() const {
-        return value_;
-    }
+  [[nodiscard]]
+  const std::variant<HttpFailure, HttpSuccess> &value() const {
+    return value_;
+  }
 
-    template<class A>
+  [[nodiscard]]
+  std::optional<HttpFailure> failure() const {
+    return std::holds_alternative<HttpFailure>(value_)
+        ? std::get<HttpFailure>(value_)
+        : std::optional<HttpFailure>{};
+  }
+
+  [[nodiscard]]
+  std::optional<HttpSuccess> success() const {
+    return std::holds_alternative<HttpSuccess>(value_)
+        ? std::get<HttpSuccess>(value_)
+        : std::optional<HttpSuccess>{};
+  }
+
+  template<class A>
     [[nodiscard]]
     A match(const std::function<A(const HttpFailure&)> failureFn, const std::function<A(const HttpSuccess&)> successFn) {
         return std::visit(visitor{
