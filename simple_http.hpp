@@ -379,6 +379,11 @@ struct HttpUrl final {
     , value_(std::move(value))
   { }
 
+  explicit HttpUrl(std::string_view value)
+      : protocol_(detect_protocol(std::string(value)))
+      , value_(std::string(value))
+  { }
+
   [[nodiscard]]
   const Protcol & protocol() const {
     return protocol_;
