@@ -272,17 +272,27 @@ struct HttpFailure final {
   }
 
   [[nodiscard]]
-    const HttpResponse &value() const {
-        return value_;
-    }
+  const HttpResponse &value() const {
+    return value_;
+  }
 
-    static HttpFailure empty() {
-        return HttpFailure{HttpResponse{
-            HttpStatusCode{0},
-            HttpResponseHeaders{Headers{}},
-            HttpResponseBody{}}
-        };
-    }
+  [[nodiscard]]
+  const HttpStatusCode &status() const {
+    return value_.status;
+  }
+
+  [[nodiscard]]
+  const HttpResponseBody &body() const {
+    return value_.body;
+  }
+
+  static HttpFailure empty() {
+    return HttpFailure{HttpResponse{
+      HttpStatusCode{0},
+      HttpResponseHeaders{Headers{}},
+      HttpResponseBody{}}
+    };
+  }
 private:
     HttpResponse value_;
 };
