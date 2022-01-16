@@ -251,6 +251,11 @@ struct HttpSuccess final {
     return value_.body;
   }
 
+  [[nodiscard]]
+  const HttpResponseHeaders &headers() const {
+    return value_.headers;
+  }
+
 private:
   HttpResponse value_;
 };
@@ -316,7 +321,7 @@ struct HttpResult final {
     template<class A>
     [[nodiscard]]
     A match(const std::function<A(const HttpFailure&)> failureFn, const std::function<A(const HttpSuccess&)> successFn) {
-        std::visit(visitor{
+        return std::visit(visitor{
             [&failureFn](const HttpFailure &failure){ return failureFn(failure); },
             [&successFn](const HttpSuccess &success){ return successFn(success); }
         }, value_);
@@ -552,12 +557,6 @@ inline static Predicate<HttpStatusCode> client_error() {
 
 inline static Predicate<HttpStatusCode> server_error() {
   return between_inclusive(INTERNAL_SERVER_ERROR, NETWORK_AUTHENTICATION_REQUIRED);
-}
-
-template<class A>
-A wrap_response(std::optional<HttpResponse> response,
-                std::function<A(const std::optional<HttpResponse> &response)> wrapperFn) {
-  return wrapperFn(response);
 }
 
 struct Client final {
