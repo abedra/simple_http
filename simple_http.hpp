@@ -384,6 +384,8 @@ struct HttpUrl final {
       , value_(std::string(value))
   { }
 
+  ~HttpUrl() = default;
+
   [[nodiscard]]
   const Protcol & protocol() const {
     return protocol_;
