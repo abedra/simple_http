@@ -187,20 +187,20 @@ TEST_CASE("Integration Tests")
     );
   }
 
-  SECTION("Connection error")
-  {
-    std::string error;
-    client = client.with_error_callback([&error](auto &err) { error = "Error: " + err; });
-    SimpleHttp::HttpUrl httpUrl = url.with_protocol(SimpleHttp::Protcol{"zxcv"});
-    client.get(httpUrl).template match<void>(
-        [&error](const SimpleHttp::HttpFailure &failure){
-          CHECK(error == "Error: Unsupported protocol");
-        },
-        [](const SimpleHttp::HttpSuccess &success){
-          FAIL(success.status().to_string() + " : " + success.body().value());
-        }
-    );
-  }
+//  SECTION("Connection error")
+//  {
+//    std::string error;
+//    client = client.with_error_callback([&error](auto &err) { error = "Error: " + err; });
+//    SimpleHttp::HttpUrl httpUrl = url.with_protocol(SimpleHttp::Protcol{"zxcv"});
+//    client.get(httpUrl).template match<void>(
+//        [&error](const SimpleHttp::HttpFailure &failure){
+//          CHECK(error == "Error: Unsupported protocol");
+//        },
+//        [](const SimpleHttp::HttpSuccess &success){
+//          FAIL(success.status().to_string() + " : " + success.body().value());
+//        }
+//    );
+//  }
 
   SECTION("POST request that expects a 204 NO_CONTENT response")
   {
