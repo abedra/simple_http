@@ -7,24 +7,6 @@
 using namespace SimpleHttp;
 
 // TODO: Replace these with custom Catch2 matcher
-static void CHECK_SUCCESS(const HttpResult &result, const HttpSuccess &expected) {
-  result.template match<void>(
-      [](const HttpFailure &failure){
-        failure.template match<void>(
-            [](const HttpConnectionFailure &c) {
-              FAIL(c.value());
-            },
-            [](const HttpResponse &s){
-              FAIL(s);
-            }
-        );
-      },
-      [&expected](const HttpSuccess &success){
-        CHECK(success.body() == expected.body());
-      }
-  );
-}
-
 static void CHECK_SUCCESS_STATUS(const HttpResult &result, const HttpStatusCode &statusCode) {
   result.template match<void>(
       [](const HttpFailure &failure){
@@ -132,15 +114,7 @@ TEST_CASE("Integration Tests")
   {
     HttpUrl httpUrl = url.with_path_segments(PathSegments{{PathSegment{"get"}}});
 
-    HttpSuccess expected{
-      HttpResponse{
-          OK,
-          HttpResponseHeaders{Headers{}},
-          HttpResponseBody{R"({"get": "ok"})"}
-      }
-    };
-
-    CHECK_SUCCESS(client.get(httpUrl), expected);
+    CHECK_SUCCESS_BODY(client.get(httpUrl), HttpResponseBody{R"({"get": "ok"})"});
   }
   
   SECTION("GET request with single query parameter")
@@ -151,15 +125,7 @@ TEST_CASE("Integration Tests")
           {{QueryParameterKey{"name"}, QueryParameterValue{"test"}}}
         });
 
-    HttpSuccess expected{
-        HttpResponse{
-            OK,
-            HttpResponseHeaders{Headers{}},
-            HttpResponseBody{R"({"hello": "test"})"}
-        }
-    };
-
-    CHECK_SUCCESS(client.get(httpUrl), expected);
+    CHECK_SUCCESS_BODY(client.get(httpUrl), HttpResponseBody{R"({"hello": "test"})"});
   }
 
   SECTION("GET request with multiple query parameters")
@@ -171,15 +137,7 @@ TEST_CASE("Integration Tests")
           {QueryParameterKey{"last"}, QueryParameterValue{"http"}}
         }});
 
-    HttpSuccess expected{
-        HttpResponse{
-            OK,
-            HttpResponseHeaders{Headers{}},
-            HttpResponseBody{R"({"first": "simple", "last": "http"})"}
-        }
-    };
-
-    CHECK_SUCCESS(client.get(httpUrl), expected);
+    CHECK_SUCCESS_BODY(client.get(httpUrl), HttpResponseBody{R"({"first": "simple", "last": "http"})"});
   }
 
   SECTION("POST request")
@@ -188,15 +146,7 @@ TEST_CASE("Integration Tests")
     HttpRequestBody body = HttpRequestBody{R"({"name":"test"})"};
     Headers headers{{{"Content-Type", "application/json"}}};
 
-    HttpSuccess expected{
-        HttpResponse{
-            OK,
-            HttpResponseHeaders{Headers{}},
-            HttpResponseBody{R"({"hello": "test"})"}
-        }
-    };
-
-    CHECK_SUCCESS(client.post(httpUrl, body, headers), expected);
+    CHECK_SUCCESS_BODY(client.post(httpUrl, body, headers), HttpResponseBody{R"({"hello": "test"})"});
   }
 
   SECTION("PUT request")
@@ -205,15 +155,7 @@ TEST_CASE("Integration Tests")
     HttpRequestBody body = HttpRequestBody{R"({"update":"test"})"};
     Headers headers{{{"Content-Type", "application/json"}}};
 
-    HttpSuccess expected{
-        HttpResponse{
-            OK,
-            HttpResponseHeaders{Headers{}},
-            HttpResponseBody{R"({"update": "test"})"}
-        }
-    };
-
-    CHECK_SUCCESS(client.put(httpUrl, body, headers), expected);
+    CHECK_SUCCESS_BODY(client.put(httpUrl, body, headers), HttpResponseBody{R"({"update": "test"})"});
   }
 
   SECTION("DELETE request")
