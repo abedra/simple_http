@@ -336,7 +336,7 @@ struct HttpResult final {
 
   template<class A>
     [[nodiscard]]
-    A match(const std::function<A(const HttpFailure&)> failureFn, const std::function<A(const HttpSuccess&)> successFn) {
+    A match(const std::function<A(const HttpFailure&)> failureFn, const std::function<A(const HttpSuccess&)> successFn) const {
         return std::visit(visitor{
             [&failureFn](const HttpFailure &failure){ return failureFn(failure); },
             [&successFn](const HttpSuccess &success){ return successFn(success); }
