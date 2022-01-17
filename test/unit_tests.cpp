@@ -209,19 +209,25 @@ TEST_CASE("QueryParameters")
 
 TEST_CASE("HttpResult")
 {
-  SimpleHttp::HttpSuccess success = SimpleHttp::HttpSuccess{SimpleHttp::HttpResponse{
+  SimpleHttp::HttpSuccess success{
+    SimpleHttp::HttpResponse{
       SimpleHttp::OK,
       SimpleHttp::HttpResponseHeaders{SimpleHttp::Headers{}},
       SimpleHttp::HttpResponseBody{}}};
-  SimpleHttp::HttpFailure failure = SimpleHttp::HttpFailure::empty();
+  SimpleHttp::HttpFailure semanticFailure{
+      SimpleHttp::HttpResponse{
+        SimpleHttp::BAD_REQUEST,
+        SimpleHttp::HttpResponseHeaders{SimpleHttp::Headers{}},
+        SimpleHttp::HttpResponseBody{}}};
+  SimpleHttp::HttpFailure connectionFailure{SimpleHttp::HttpConnectionFailure{"failure"}};
 
   SECTION("Failure")
   {
-    SimpleHttp::HttpResult result{failure};
-    CHECK(result.failure() == std::optional<SimpleHttp::HttpFailure>{failure});
+    SimpleHttp::HttpResult result{semanticFailure};
+    CHECK(result.failure() == std::optional<SimpleHttp::HttpFailure>{semanticFailure});
     result.template match<void>(
-        [&failure](const SimpleHttp::HttpFailure &f){
-          CHECK(f == failure);
+        [&semanticFailure](const SimpleHttp::HttpFailure &f){
+          CHECK(f == semanticFailure);
         },
         [](const SimpleHttp::HttpSuccess &s){
           FAIL("Got Successful Response: " << s.value());
@@ -235,7 +241,14 @@ TEST_CASE("HttpResult")
     CHECK(result.success() == std::optional<SimpleHttp::HttpSuccess>{success});
     result.template match<void>(
         [](const SimpleHttp::HttpFailure &f){
-          FAIL("Got Failure Response: " << f.value());
+          f.template match<void>(
+              [](const SimpleHttp::HttpConnectionFailure &cf) {
+                FAIL("Connection Failure: " << cf.value());
+              },
+              [](const SimpleHttp::HttpResponse &sf) {
+                FAIL("Got Failure Response: " << sf);
+              }
+          );
         },
         [&success](const SimpleHttp::HttpSuccess &s){
           CHECK(s == success);

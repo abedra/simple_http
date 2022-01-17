@@ -73,6 +73,7 @@ protected:
   struct Name##Detail {};                \
   using Name = Tiny<Name##Detail, long>; \
 
+SIMPLE_HTTP_TINY_STRING(HttpConnectionFailure)
 SIMPLE_HTTP_TINY_STRING(HttpResponseBody)
 SIMPLE_HTTP_TINY_STRING(HttpRequestBody)
 SIMPLE_HTTP_TINY_STRING(Protcol)
@@ -258,6 +259,7 @@ private:
 };
 
 struct HttpFailure final {
+  explicit HttpFailure(HttpConnectionFailure value) : value_(std::move(value)) { }
   explicit HttpFailure(HttpResponse value) : value_(std::move(value)) { }
 
   bool operator==(const HttpFailure &rhs) const {
@@ -269,34 +271,37 @@ struct HttpFailure final {
   }
 
   friend std::ostream &operator<<(std::ostream &os, const HttpFailure &failure) {
-    os << failure.value_;
+    failure.template match<void>(
+        [&os](const HttpConnectionFailure &f) {
+          os << f;
+        },
+        [&os](const HttpResponse &s) {
+          os << s;
+        }
+    );
     return os;
   }
 
   [[nodiscard]]
-  const HttpResponse &value() const {
+  const std::variant<HttpConnectionFailure, HttpResponse> &value() const {
     return value_;
   }
 
-  [[nodiscard]]
-  const HttpStatusCode &status() const {
-    return value_.status;
+  template<class A>
+  A match(const std::function<A(const HttpConnectionFailure &connectionFailure)> &cFn,
+          const std::function<A(const HttpResponse &semanticFailure)> &sFn) const {
+    return std::visit(visitor{
+      [&cFn](const HttpConnectionFailure &c) {
+        return cFn(c);
+      },
+      [&sFn](const HttpResponse &s) {
+        return sFn(s);
+      }
+    }, value_);
   }
 
-  [[nodiscard]]
-  const HttpResponseBody &body() const {
-    return value_.body;
-  }
-
-  static HttpFailure empty() {
-    return HttpFailure{HttpResponse{
-      HttpStatusCode{0},
-      HttpResponseHeaders{Headers{}},
-      HttpResponseBody{}}
-    };
-  }
 private:
-    HttpResponse value_;
+  std::variant<HttpConnectionFailure, HttpResponse> value_;
 };
 
 struct HttpResult final {
@@ -759,7 +764,7 @@ private:
 
       CURLcode res = curl_easy_perform(curl_);
       if (res != CURLE_OK) {
-        return HttpResult{HttpFailure::empty()};
+        return HttpResult{HttpFailure{HttpConnectionFailure{curl_easy_strerror(res)}}};
       }
 
       long status_code = 0;
