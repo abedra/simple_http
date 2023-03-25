@@ -694,7 +694,7 @@ struct Client final {
 
       curlWrapper.execute_header_callback(curl_header_callback);
       curlWrapper.add_option(CURLOPT_URL, url.value().c_str());
-      curlWrapper.add_option(CURLOPT_VERBOSE, debug_);
+      curlWrapper.add_option(CURLOPT_VERBOSE, debug_ ? 1L : 0L);
 
       if (url.protocol().value() == "https") {
           verify_
