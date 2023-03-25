@@ -9,6 +9,7 @@
 #include <utility>
 #include <variant>
 #include <ostream>
+#include <numeric>
 
 namespace SimpleHttp {
 
